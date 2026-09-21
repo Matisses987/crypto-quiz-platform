@@ -1,0 +1,7 @@
+{
+  "name": "cqp-tests",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "description": "Test entry: makes `node --test tests/` resolve the directory to this entry on Node builds that resolve positional args as files."
+}

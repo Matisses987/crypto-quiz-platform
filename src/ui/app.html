@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>密码赛刷题平台 · 2026 江苏省密码行业职业技能竞赛（学生组）</title>
+<style>/*{{STYLE}}*/</style>
+</head>
+<body>
+<div id="banner" class="banner error hidden"></div>
+
+<header class="topbar">
+  <div class="brand">密码赛刷题平台<span class="ver">v{{APP_VERSION}} · 题库 {{BANK_VERSION}}</span></div>
+  <nav class="nav" id="nav">
+    <button data-nav="home">首页</button>
+    <button data-nav="setup">分类练习</button>
+    <button data-nav="wrongbook">错题本</button>
+    <button data-nav="stats">学习统计</button>
+    <button data-nav="team">团队对比</button>
+    <button data-nav="io">导出/导入</button>
+    <button data-nav="mock">模拟选拔赛</button>
+    <button data-nav="review">校对纠错</button>
+  </nav>
+  <div class="whoami" id="whoami"></div>
+</header>
+
+<main id="main"></main>
+
+<div id="toast" class="toast hidden"></div>
+<div id="modalRoot"></div>
+
+<script id="bank-data" type="application/json">/*{{BANK_JSON}}*/</script>
+<script id="cqp-core">/*{{CORE_JS}}*/</script>
+<script id="cqp-app">/*{{APP_JS}}*/</script>
+</body>
+</html>

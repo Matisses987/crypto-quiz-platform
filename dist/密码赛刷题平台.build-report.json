@@ -1,0 +1,117 @@
+{
+  "builtAt": "2026-09-21T11:46:45.651Z",
+  "appVersion": "1.1.0",
+  "bankPath": "src/data/bank.json",
+  "bankVersion": "2026.08-pdf1",
+  "fixture": false,
+  "questions": 1051,
+  "validateBank": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "blockingErrors": [],
+  "counts": {
+    "bySectionType": {
+      "single": 491,
+      "multiple": 358,
+      "judge": 172,
+      "blank": 30
+    },
+    "byResponseMode": {
+      "single": 492,
+      "multiple": 357,
+      "judge": 172,
+      "blank": 30
+    },
+    "byChapter": {
+      "C01": 65,
+      "C02": 50,
+      "C03": 55,
+      "C04": 45,
+      "C05": 396,
+      "C06": 195,
+      "C07": 245
+    }
+  },
+  "tagCoverage": {
+    "total": 1051,
+    "threshold": 0.8,
+    "standard": {
+      "specific": 880,
+      "fallback": 171,
+      "rate": 0.8373,
+      "gate": true
+    },
+    "conservative": {
+      "specific": 822,
+      "fallback": 229,
+      "rate": 0.7821
+    }
+  },
+  "distribution": {
+    "blank": 3,
+    "multiple": 34,
+    "single": 47,
+    "judge": 16
+  },
+  "selfContainment": {
+    "ok": true,
+    "problems": [],
+    "counts": {
+      "external URLs": 0,
+      "script src": 0,
+      "link href": 0,
+      "fetch call": 0,
+      "XMLHttpRequest": 0,
+      "WebSocket": 0,
+      "new Image": 0,
+      "css @import": 0,
+      "css remote url": 0,
+      "iframe/object/embed": 0
+    }
+  },
+  "bytes": 1056911,
+  "ok": true,
+  "artifactCheck": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "script blocks present",
+        "ok": true
+      },
+      {
+        "name": "no protocol text",
+        "ok": true
+      },
+      {
+        "name": "single html document",
+        "ok": true
+      },
+      {
+        "name": "inlined bank parses",
+        "ok": true
+      },
+      {
+        "name": "CQP registered",
+        "ok": true
+      },
+      {
+        "name": "validateBank ok (1051 questions)",
+        "ok": true
+      },
+      {
+        "name": "mock paper 100 unique questions (pool 1051)",
+        "ok": true
+      },
+      {
+        "name": "blank full-width judging works",
+        "ok": true
+      },
+      {
+        "name": "app script wires the UI",
+        "ok": true
+      }
+    ]
+  }
+}

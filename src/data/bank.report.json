@@ -1,0 +1,3484 @@
+{
+  "generatedAt": "2026-09-16T20:00:00+08:00",
+  "bankVersion": "2026.08-pdf1",
+  "schemaVersion": "1.0.0",
+  "source": {
+    "fileName": "密码赛题库.pdf",
+    "pages": 199,
+    "theoryBlocks": 1051,
+    "printedQuestions": 1050,
+    "excludedCount": 12,
+    "excludedReason": "第三部分实操题不纳入（用户决策 D12）"
+  },
+  "sourceNote": "cached page text: bank_text.json",
+  "manualAnswersEnabled": true,
+  "manualAnswers": [
+    {
+      "id": "Q-C05-F-0007",
+      "answer": [
+        "16"
+      ],
+      "rawAnswer": null,
+      "sourcePage": 97,
+      "evidence": "题干：长度为 1000 字节…SM3 会把它切成若干个 512 位（64 字节）的块，那么可以切 16 块；1000/64=15.625 向上取整 = 16，与题干自洽",
+      "note": "原文无「答案：」行，答案出自题干与分块计算，已人工确认；题干保持与原文逐字一致，未改动"
+    }
+  ],
+  "droppedLines": {
+    "footer": 194,
+    "marker": 0,
+    "blank": 0,
+    "toc": 30,
+    "frontmatter": 52
+  },
+  "counts": {
+    "questions": 1051,
+    "printed": 1050,
+    "answerOk": 1051,
+    "answerMissing": 0,
+    "bySectionType": {
+      "single": 491,
+      "multiple": 358,
+      "judge": 172,
+      "blank": 30
+    },
+    "byResponseMode": {
+      "single": 492,
+      "multiple": 357,
+      "judge": 172,
+      "blank": 30
+    },
+    "printedByType": {
+      "single": 490,
+      "multiple": 358,
+      "judge": 172,
+      "blank": 30
+    },
+    "difficulty": {
+      "1": 172,
+      "2": 534,
+      "3": 345
+    },
+    "tagDistribution": {
+      "标准规范": 224,
+      "公钥密码": 138,
+      "杂凑与消息鉴别": 91,
+      "密码学基础": 87,
+      "商用密码": 79,
+      "分组密码": 77,
+      "电子认证与 PKI": 76,
+      "量子密码": 75,
+      "SM4": 73,
+      "密钥管理": 72,
+      "SM2": 72,
+      "密评与建设运维": 70,
+      "网络安全与关基": 68,
+      "数据安全与个人信息": 67,
+      "密码应用": 58,
+      "密码前沿技术": 51,
+      "密码法": 45,
+      "SM3": 45,
+      "人工智能安全": 39,
+      "部门规章": 33,
+      "网络协议与密码应用": 32,
+      "ZUC": 30,
+      "口令与鉴权": 25,
+      "SM9": 24,
+      "区块链": 22,
+      "网络安全法": 21,
+      "密码管理规章制度": 18,
+      "核心密码与普通密码": 14,
+      "个人信息保护法": 14,
+      "其他政策法规条例": 12,
+      "地方性法规": 11,
+      "流密码": 11,
+      "商用密码管理条例": 10,
+      "数据安全法": 10,
+      "电子签名法": 8,
+      "物联网与工控安全": 6,
+      "密码法律法规": 2,
+      "网络安全法律法规": 1
+    }
+  },
+  "table": [
+    {
+      "chapterCode": "C01",
+      "chapterName": "密码法律法规",
+      "partCode": "B",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 40,
+      "actualBlocks": 40,
+      "expectedPrinted": 40,
+      "actualPrinted": 40
+    },
+    {
+      "chapterCode": "C01",
+      "chapterName": "密码法律法规",
+      "partCode": "B",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 13,
+      "actualBlocks": 13,
+      "expectedPrinted": 13,
+      "actualPrinted": 13
+    },
+    {
+      "chapterCode": "C01",
+      "chapterName": "密码法律法规",
+      "partCode": "B",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 12,
+      "actualBlocks": 12,
+      "expectedPrinted": 12,
+      "actualPrinted": 12
+    },
+    {
+      "chapterCode": "C02",
+      "chapterName": "网络安全法律法规",
+      "partCode": "B",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 30,
+      "actualBlocks": 30,
+      "expectedPrinted": 30,
+      "actualPrinted": 30
+    },
+    {
+      "chapterCode": "C02",
+      "chapterName": "网络安全法律法规",
+      "partCode": "B",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C02",
+      "chapterName": "网络安全法律法规",
+      "partCode": "B",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C03",
+      "chapterName": "密码管理规章制度",
+      "partCode": "B",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 35,
+      "actualBlocks": 35,
+      "expectedPrinted": 35,
+      "actualPrinted": 35
+    },
+    {
+      "chapterCode": "C03",
+      "chapterName": "密码管理规章制度",
+      "partCode": "B",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C03",
+      "chapterName": "密码管理规章制度",
+      "partCode": "B",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C04",
+      "chapterName": "其他政策法规条例",
+      "partCode": "B",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 25,
+      "actualBlocks": 25,
+      "expectedPrinted": 25,
+      "actualPrinted": 25
+    },
+    {
+      "chapterCode": "C04",
+      "chapterName": "其他政策法规条例",
+      "partCode": "B",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C04",
+      "chapterName": "其他政策法规条例",
+      "partCode": "B",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 10,
+      "actualBlocks": 10,
+      "expectedPrinted": 10,
+      "actualPrinted": 10
+    },
+    {
+      "chapterCode": "C05",
+      "chapterName": "密码学",
+      "partCode": "P",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 156,
+      "actualBlocks": 156,
+      "expectedPrinted": 155,
+      "actualPrinted": 155
+    },
+    {
+      "chapterCode": "C05",
+      "chapterName": "密码学",
+      "partCode": "P",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 130,
+      "actualBlocks": 130,
+      "expectedPrinted": 130,
+      "actualPrinted": 130
+    },
+    {
+      "chapterCode": "C05",
+      "chapterName": "密码学",
+      "partCode": "P",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 80,
+      "actualBlocks": 80,
+      "expectedPrinted": 80,
+      "actualPrinted": 80
+    },
+    {
+      "chapterCode": "C05",
+      "chapterName": "密码学",
+      "partCode": "P",
+      "sectionType": "blank",
+      "typeName": "填空题",
+      "expectedBlocks": 30,
+      "actualBlocks": 30,
+      "expectedPrinted": 30,
+      "actualPrinted": 30
+    },
+    {
+      "chapterCode": "C06",
+      "chapterName": "密码前沿技术",
+      "partCode": "P",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 115,
+      "actualBlocks": 115,
+      "expectedPrinted": 115,
+      "actualPrinted": 115
+    },
+    {
+      "chapterCode": "C06",
+      "chapterName": "密码前沿技术",
+      "partCode": "P",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 60,
+      "actualBlocks": 60,
+      "expectedPrinted": 60,
+      "actualPrinted": 60
+    },
+    {
+      "chapterCode": "C06",
+      "chapterName": "密码前沿技术",
+      "partCode": "P",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 20,
+      "actualBlocks": 20,
+      "expectedPrinted": 20,
+      "actualPrinted": 20
+    },
+    {
+      "chapterCode": "C07",
+      "chapterName": "标准题",
+      "partCode": "P",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "expectedBlocks": 90,
+      "actualBlocks": 90,
+      "expectedPrinted": 90,
+      "actualPrinted": 90
+    },
+    {
+      "chapterCode": "C07",
+      "chapterName": "标准题",
+      "partCode": "P",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "expectedBlocks": 125,
+      "actualBlocks": 125,
+      "expectedPrinted": 125,
+      "actualPrinted": 125
+    },
+    {
+      "chapterCode": "C07",
+      "chapterName": "标准题",
+      "partCode": "P",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "expectedBlocks": 30,
+      "actualBlocks": 30,
+      "expectedPrinted": 30,
+      "actualPrinted": 30
+    }
+  ],
+  "continuity": [
+    {
+      "chapterCode": "C01",
+      "sectionType": "single",
+      "blocks": 40,
+      "printed": 40,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
+    },
+    {
+      "chapterCode": "C01",
+      "sectionType": "multiple",
+      "blocks": 13,
+      "printed": 13,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ]
+    },
+    {
+      "chapterCode": "C01",
+      "sectionType": "judge",
+      "blocks": 12,
+      "printed": 12,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "chapterCode": "C02",
+      "sectionType": "single",
+      "blocks": 30,
+      "printed": 30,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "chapterCode": "C02",
+      "sectionType": "multiple",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C02",
+      "sectionType": "judge",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C03",
+      "sectionType": "single",
+      "blocks": 35,
+      "printed": 35,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ]
+    },
+    {
+      "chapterCode": "C03",
+      "sectionType": "multiple",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C03",
+      "sectionType": "judge",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C04",
+      "sectionType": "single",
+      "blocks": 25,
+      "printed": 25,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ]
+    },
+    {
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C04",
+      "sectionType": "judge",
+      "blocks": 10,
+      "printed": 10,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "chapterCode": "C05",
+      "sectionType": "single",
+      "blocks": 156,
+      "printed": 155,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ]
+    },
+    {
+      "chapterCode": "C05",
+      "sectionType": "multiple",
+      "blocks": 130,
+      "printed": 130,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130
+      ]
+    },
+    {
+      "chapterCode": "C05",
+      "sectionType": "judge",
+      "blocks": 80,
+      "printed": 80,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80
+      ]
+    },
+    {
+      "chapterCode": "C05",
+      "sectionType": "blank",
+      "blocks": 30,
+      "printed": 30,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "blocks": 115,
+      "printed": 115,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115
+      ]
+    },
+    {
+      "chapterCode": "C06",
+      "sectionType": "multiple",
+      "blocks": 60,
+      "printed": 60,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ]
+    },
+    {
+      "chapterCode": "C06",
+      "sectionType": "judge",
+      "blocks": 20,
+      "printed": 20,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ]
+    },
+    {
+      "chapterCode": "C07",
+      "sectionType": "single",
+      "blocks": 90,
+      "printed": 90,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90
+      ]
+    },
+    {
+      "chapterCode": "C07",
+      "sectionType": "multiple",
+      "blocks": 125,
+      "printed": 125,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125
+      ]
+    },
+    {
+      "chapterCode": "C07",
+      "sectionType": "judge",
+      "blocks": 30,
+      "printed": 30,
+      "consecutive": true,
+      "numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    }
+  ],
+  "judgeAnswerDistribution": {
+    "对": 81,
+    "错": 91
+  },
+  "needsReviewIds": [
+    "Q-C05-S-0060",
+    "Q-C05-F-0007",
+    "Q-C06-S-0004",
+    "Q-C06-M-0008",
+    "Q-C07-S-0027"
+  ],
+  "typeMismatchIds": [
+    "Q-C04-M-0002",
+    "Q-C04-M-0009",
+    "Q-C06-M-0008",
+    "Q-C06-S-0004",
+    "Q-C07-S-0027"
+  ],
+  "matching": [
+    {
+      "id": "Q-C04-M-0002",
+      "responseMode": "single"
+    },
+    {
+      "id": "Q-C04-M-0009",
+      "responseMode": "single"
+    },
+    {
+      "id": "Q-C06-S-0006",
+      "responseMode": "single"
+    },
+    {
+      "id": "Q-C06-S-0096",
+      "responseMode": "single"
+    }
+  ],
+  "buildWarnings": [
+    {
+      "id": "Q-C04-M-0002",
+      "sectionType": "multiple",
+      "responseMode": "single",
+      "answer": [
+        "A"
+      ],
+      "note": "matching/连线 question: single-letter pairing answer (defect C, build warning only)"
+    },
+    {
+      "id": "Q-C04-M-0009",
+      "sectionType": "multiple",
+      "responseMode": "single",
+      "answer": [
+        "A"
+      ],
+      "note": "matching/连线 question: single-letter pairing answer (defect C, build warning only)"
+    },
+    {
+      "id": "Q-C06-S-0004",
+      "sectionType": "single",
+      "responseMode": "multiple",
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "note": "answer shape differs from the section type (defect G: needsReview=true)"
+    },
+    {
+      "id": "Q-C06-M-0008",
+      "sectionType": "multiple",
+      "responseMode": "single",
+      "answer": [
+        "C"
+      ],
+      "note": "answer shape differs from the section type (defect G: needsReview=true)"
+    },
+    {
+      "id": "Q-C07-S-0027",
+      "sectionType": "single",
+      "responseMode": "multiple",
+      "answer": [
+        "B",
+        "C"
+      ],
+      "note": "answer shape differs from the section type (defect G: needsReview=true)"
+    }
+  ],
+  "optionStructureNotes": [
+    {
+      "id": "Q-C05-S-0128",
+      "note": "multiple_options_per_line",
+      "page": 63,
+      "stem": "某信息系统部署在云服务提供商（CSP）机房，其物理机房完全由 CSP 托管，那么在对该信息系统进行密评时，在物理和环境安"
+    },
+    {
+      "id": "Q-C05-M-0123",
+      "note": "options_inline_with_stem",
+      "page": 89,
+      "stem": "某四级信息系统的责任单位可采用以下（ ）机制以满足“人员管理”方面的要求。"
+    },
+    {
+      "id": "Q-C06-S-0018",
+      "note": "multiple_options_per_line",
+      "page": 102,
+      "stem": "下列对于 DMZ 区的说法错误的是（ ）。"
+    },
+    {
+      "id": "Q-C07-M-0109",
+      "note": "multiple_options_per_line",
+      "page": 170,
+      "stem": "依据 GM/T 0002-2012《SM4 分组密码算法》，下列关于 SM4 算法的 S 盒描述中，哪些是正确的？（ ）"
+    }
+  ],
+  "tags": {
+    "specific": 880,
+    "fallback": 171,
+    "fallbackNamed": 229,
+    "coverage": 0.8373,
+    "coverageNarrow": 0.7821
+  },
+  "fallbackByChapter": {
+    "C01": 2,
+    "C02": 1,
+    "C03": 18,
+    "C04": 12,
+    "C05": 87,
+    "C06": 51
+  },
+  "duplicateStems": [
+    {
+      "stem": "签名者无法知道所签消息的具体内容，即使后来签名者见到这个签名时，也不能确定当时签名的行为，这种签名称为（ ）。",
+      "ids": [
+        "Q-C05-S-0103",
+        "Q-C05-S-0112"
+      ],
+      "count": 2
+    },
+    {
+      "stem": "杂凑函数是一种将任意长度的消息压缩到某一固定长度的消息摘要的函数。以下关于杂凑函数的说法正确的是（ ）。",
+      "ids": [
+        "Q-C05-M-0002",
+        "Q-C05-M-0018"
+      ],
+      "count": 2
+    },
+    {
+      "stem": "依据《网络安全标准实践指南——OpenClaw 类智能体部署使用安全指引》，卸载 OpenClaw 类智能体后，无需对残",
+      "ids": [
+        "Q-C06-J-0006",
+        "Q-C06-J-0013"
+      ],
+      "count": 2
+    }
+  ],
+  "blankAnswers": [
+    {
+      "id": "Q-C05-F-0001",
+      "printedNo": 1,
+      "answerStatus": "ok",
+      "rawAnswer": "256",
+      "answer": [
+        "256"
+      ],
+      "answerNorm": [
+        "256"
+      ],
+      "answerNormWide": [
+        "256"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "基域选择 Fp-256 时，SM2 算法的数字签名的私钥长度为 。"
+    },
+    {
+      "id": "Q-C05-F-0002",
+      "printedNo": 2,
+      "answerStatus": "ok",
+      "rawAnswer": "SM4",
+      "answer": [
+        "SM4"
+      ],
+      "answerNorm": [
+        "sm4"
+      ],
+      "answerNormWide": [
+        "sm4"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "某政务系统使用国密对称算法对敏感文件进行加密，该算法的分组长度为 128 位，密钥长度可为 128/192/256 位，且采用非平衡 Feistel 结构。该算法的标准名称是____。"
+    },
+    {
+      "id": "Q-C05-F-0003",
+      "printedNo": 3,
+      "answerStatus": "ok",
+      "rawAnswer": "SM9",
+      "answer": [
+        "SM9"
+      ],
+      "answerNorm": [
+        "sm9"
+      ],
+      "answerNormWide": [
+        "sm9"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "在金融 IC 卡应用中，使用基于椭圆曲线双线性对的标识密码算法实现无需证书的身份认证，该算法是____。"
+    },
+    {
+      "id": "Q-C05-F-0004",
+      "printedNo": 4,
+      "answerStatus": "ok",
+      "rawAnswer": "256",
+      "answer": [
+        "256"
+      ],
+      "answerNorm": [
+        "256"
+      ],
+      "answerNormWide": [
+        "256"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "MD5 算法输出 128 位哈希值，但已被证明存在碰撞攻击，不适用于数字签名场景。我国 SM3 算法输出____位哈希值，安全性更高。"
+    },
+    {
+      "id": "Q-C05-F-0005",
+      "printedNo": 5,
+      "answerStatus": "ok",
+      "rawAnswer": "128",
+      "answer": [
+        "128"
+      ],
+      "answerNorm": [
+        "128"
+      ],
+      "answerNormWide": [
+        "128"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM4 国密分组密码算法的明文分组长度为 ______ 比特。"
+    },
+    {
+      "id": "Q-C05-F-0006",
+      "printedNo": 6,
+      "answerStatus": "ok",
+      "rawAnswer": "8",
+      "answer": [
+        "8"
+      ],
+      "answerNorm": [
+        "8"
+      ],
+      "answerNormWide": [
+        "8"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM3 算法的初始化向量 IV 为 7380166f 4914b2b9 172442d7 da8a0600 a96f30bc 163138aa e38dee4d b0fb0e4e，共____个 32 位字。"
+    },
+    {
+      "id": "Q-C05-F-0007",
+      "printedNo": 7,
+      "answerStatus": "ok",
+      "rawAnswer": null,
+      "answer": [
+        "16"
+      ],
+      "answerNorm": [
+        "16"
+      ],
+      "answerNormWide": [
+        "16"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "有一张长长的数字“藏宝图”（消息），长度为 1000 字节。你需要用 SM3 算法计算它的“指纹”（杂凑值）。SM3 处理消息时，会把它切成若干个 512 位（64 字节）的块，那么可以切 16 块。"
+    },
+    {
+      "id": "Q-C05-F-0008",
+      "printedNo": 8,
+      "answerStatus": "ok",
+      "rawAnswer": "32",
+      "answer": [
+        "32"
+      ],
+      "answerNorm": [
+        "32"
+      ],
+      "answerNormWide": [
+        "32"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM4 算法的加密迭代轮数为 ______ 轮。"
+    },
+    {
+      "id": "Q-C05-F-0009",
+      "printedNo": 9,
+      "answerStatus": "ok",
+      "rawAnswer": "32",
+      "answer": [
+        "32"
+      ],
+      "answerNorm": [
+        "32"
+      ],
+      "answerNormWide": [
+        "32"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "你需要用 SM4 算法加密一条信息，想象加密过程就像通过一个有 32 扇门的迷宫，每过一扇门，信息就会被转换一次，而且每扇门都需要一把不同的钥匙（轮密钥），那么加密一个消息，需要穿过这个迷宫的 扇门。"
+    },
+    {
+      "id": "Q-C05-F-0010",
+      "printedNo": 10,
+      "answerStatus": "ok",
+      "rawAnswer": "10",
+      "answer": [
+        "10"
+      ],
+      "answerNorm": [
+        "10"
+      ],
+      "answerNormWide": [
+        "10"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "当 AES 的明文分组和密钥长度均为 128 比特时，加密迭代轮数为 ______ 轮。"
+    },
+    {
+      "id": "Q-C05-F-0011",
+      "printedNo": 11,
+      "answerStatus": "ok",
+      "rawAnswer": "896",
+      "answer": [
+        "896"
+      ],
+      "answerNorm": [
+        "896"
+      ],
+      "answerNormWide": [
+        "896"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM2 是一种基于椭圆曲线密码的公钥加密算法，如果明文长度是 128 比特，那么经过 SM2 加密后的密文长度是 比特。"
+    },
+    {
+      "id": "Q-C05-F-0012",
+      "printedNo": 12,
+      "answerStatus": "ok",
+      "rawAnswer": "D",
+      "answer": [
+        "D"
+      ],
+      "answerNorm": [
+        "d"
+      ],
+      "answerNormWide": [
+        "d"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "凯撒密码是一种经典的替换密码，通过将字母表中的每个字母移动固定的偏移量来进行加密。若给定偏移量为 3，明文字母'A'的密文字母是 。"
+    },
+    {
+      "id": "Q-C05-F-0013",
+      "printedNo": 13,
+      "answerStatus": "ok",
+      "rawAnswer": "2",
+      "answer": [
+        "2"
+      ],
+      "answerNorm": [
+        "2"
+      ],
+      "answerNormWide": [
+        "2"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM3 密码杂凑算法是中国国家密码管理局发布的一种密码杂凑算法，其压缩函数一共有 种不同的布尔函数。"
+    },
+    {
+      "id": "Q-C05-F-0014",
+      "printedNo": 14,
+      "answerStatus": "ok",
+      "rawAnswer": "48",
+      "answer": [
+        "48"
+      ],
+      "answerNorm": [
+        "48"
+      ],
+      "answerNormWide": [
+        "48"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "3DES 算法的加密迭代轮数为 ______ 轮（16 轮×3）。"
+    },
+    {
+      "id": "Q-C05-F-0015",
+      "printedNo": 15,
+      "answerStatus": "ok",
+      "rawAnswer": "16",
+      "answer": [
+        "16"
+      ],
+      "answerNorm": [
+        "16"
+      ],
+      "answerNormWide": [
+        "16"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "DES 是一种广泛使用的对称密钥加密算法，其加密过程基于 Feistel 网络结构，共经过 次迭代运算的处理。"
+    },
+    {
+      "id": "Q-C05-F-0016",
+      "printedNo": 16,
+      "answerStatus": "ok",
+      "rawAnswer": "1024",
+      "answer": [
+        "1024"
+      ],
+      "answerNorm": [
+        "1024"
+      ],
+      "answerNormWide": [
+        "1024"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "RSA 算法中，已被认为不安全、逐步淘汰的密钥长度为 ______ 比特。"
+    },
+    {
+      "id": "Q-C05-F-0017",
+      "printedNo": 17,
+      "answerStatus": "ok",
+      "rawAnswer": "RIJVS",
+      "answer": [
+        "RIJVS"
+      ],
+      "answerNorm": [
+        "rijvs"
+      ],
+      "answerNormWide": [
+        "rijvs"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "维吉尼亚加密是一种经典的多表替代密码，由布莱斯·德·维吉尼亚在 16 世纪提出。它通过密钥对明文进行加密，增强了单表替代密码的安全性。给定明文 HELLO 和密钥 KEY，则加密后的密文是_ _。"
+    },
+    {
+      "id": "Q-C05-F-0018",
+      "printedNo": 18,
+      "answerStatus": "ok",
+      "rawAnswer": "04",
+      "answer": [
+        "04"
+      ],
+      "answerNorm": [
+        "04"
+      ],
+      "answerNormWide": [
+        "04"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "你要和盟友交换 SM2 公钥。你告诉他，你发送的未压缩公钥字符串会以一个特殊的十六进制前缀“ _ _”开头，这样他就能识别出来。"
+    },
+    {
+      "id": "Q-C05-F-0019",
+      "printedNo": 19,
+      "answerStatus": "ok",
+      "rawAnswer": "64",
+      "answer": [
+        "64"
+      ],
+      "answerNorm": [
+        "64"
+      ],
+      "answerNormWide": [
+        "64"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SHA-256 算法输出的哈希值通常表示为 ______ 个十六进制字符。"
+    },
+    {
+      "id": "Q-C05-F-0020",
+      "printedNo": 20,
+      "answerStatus": "ok",
+      "rawAnswer": "8",
+      "answer": [
+        "8"
+      ],
+      "answerNorm": [
+        "8"
+      ],
+      "answerNormWide": [
+        "8"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "在 Diffie-Hellman 密钥交换协议中，双方使用公共参数：素数模数 p=23 和原根 g=5。Alice 选择私有密钥 a=6，Bob 选择私有密钥 b=15。根据协议，Alice 需要计算她的公钥 A 并发送给 Bob，那么 Alice 的公钥 A= 。"
+    },
+    {
+      "id": "Q-C05-F-0021",
+      "printedNo": 21,
+      "answerStatus": "ok",
+      "rawAnswer": "RQZC",
+      "answer": [
+        "RQZC"
+      ],
+      "answerNorm": [
+        "rqzc"
+      ],
+      "answerNormWide": [
+        "rqzc"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "对于Hill密码，给定密钥矩阵K=       3 7 11 8 和密文DHFL（字母映射：A=0, B=1, ..., Z=25），则明文为 。"
+    },
+    {
+      "id": "Q-C05-F-0022",
+      "printedNo": 22,
+      "answerStatus": "ok",
+      "rawAnswer": "1280",
+      "answer": [
+        "1280"
+      ],
+      "answerNorm": [
+        "1280"
+      ],
+      "answerNormWide": [
+        "1280"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "在 SM2 公钥加密算法中，密文由 C1、C2 和 C3 三部分组成。如果 SM2 的密文长度是 2048 比特，那么相应明文长度是 比特。"
+    },
+    {
+      "id": "Q-C05-F-0023",
+      "printedNo": 23,
+      "answerStatus": "ok",
+      "rawAnswer": "512",
+      "answer": [
+        "512"
+      ],
+      "answerNorm": [
+        "512"
+      ],
+      "answerNormWide": [
+        "512"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "你有一条很短的消息，只有 1 字节（比如一个字母“A”）。为了用 SM3 计算它的杂凑值，必须进行填充，使其总长度是 512 位的倍数。那么对这 1 字节的消息进行 SM3 填充后，整个消息（原始消息+填充数据）的总长度是 比特。"
+    },
+    {
+      "id": "Q-C05-F-0024",
+      "printedNo": 24,
+      "answerStatus": "ok",
+      "rawAnswer": "k",
+      "answer": [
+        "k"
+      ],
+      "answerNorm": [
+        "k"
+      ],
+      "answerNormWide": [
+        "k"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "在(k,n)-秘密分割门限方案中，至少需要 ______ 个参与者才能重构被分割的秘密。"
+    },
+    {
+      "id": "Q-C05-F-0025",
+      "printedNo": 25,
+      "answerStatus": "ok",
+      "rawAnswer": "120",
+      "answer": [
+        "120"
+      ],
+      "answerNorm": [
+        "120"
+      ],
+      "answerNormWide": [
+        "120"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "在 RSA 密钥生成过程中，两个质数 p 和 q 被选中，已知它们的和 p+q=24 且积 p×q=143。那么，用于计算私钥的欧拉函数 ϕ（n）的值为 。"
+    },
+    {
+      "id": "Q-C05-F-0026",
+      "printedNo": 26,
+      "answerStatus": "ok",
+      "rawAnswer": "256",
+      "answer": [
+        "256"
+      ],
+      "answerNorm": [
+        "256"
+      ],
+      "answerNormWide": [
+        "256"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "假如你截获了一份文件，需要验证其真伪。你使用 SM3 算法为其生成一个唯一的“数字指纹”（杂凑值）。这个指纹的长度是 比特。"
+    },
+    {
+      "id": "Q-C05-F-0027",
+      "printedNo": 27,
+      "answerStatus": "ok",
+      "rawAnswer": "32",
+      "answer": [
+        "32"
+      ],
+      "answerNorm": [
+        "32"
+      ],
+      "answerNormWide": [
+        "32"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "SM4 分组密码算法采用 32 轮非线性迭代结构（Feistel 网络），每轮使用一个轮密钥和一个固定的非线性变换。其加密过程共需要进行 轮非线性迭代运算。"
+    },
+    {
+      "id": "Q-C05-F-0028",
+      "printedNo": 28,
+      "answerStatus": "ok",
+      "rawAnswer": "113",
+      "answer": [
+        "113"
+      ],
+      "answerNorm": [
+        "113"
+      ],
+      "answerNormWide": [
+        "113"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "使用 SM2 算法加密一条长度为 16 字节的明文消息，若采用未压缩点形式表示公钥点，则最终生成的密文长度为 字节。"
+    },
+    {
+      "id": "Q-C05-F-0029",
+      "printedNo": 29,
+      "answerStatus": "ok",
+      "rawAnswer": "128",
+      "answer": [
+        "128"
+      ],
+      "answerNorm": [
+        "128"
+      ],
+      "answerNormWide": [
+        "128"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "假如你正在处理 SM4 加密的数据，知道 SM4 每次加密的数据块大小是固定的，就像保险箱的储物格一样大，每个格子可以存放___比特的数据。"
+    },
+    {
+      "id": "Q-C05-F-0030",
+      "printedNo": 30,
+      "answerStatus": "ok",
+      "rawAnswer": "3",
+      "answer": [
+        "3"
+      ],
+      "answerNorm": [
+        "3"
+      ],
+      "answerNormWide": [
+        "3"
+      ],
+      "changedByNormWide": false,
+      "blankCount": 1,
+      "stem": "一段密文由栅栏密码加密所得，其解密过程如下：首先计算出栏数（密钥）为 4，然后将密文依次按列填入一个 4 列的栅栏中，最后按行读取得到明文。若密文长度为 19 个字符，则用于填充密文的栅栏矩阵，其最后一行的列数应为 。"
+    }
+  ],
+  "optionIssues": [],
+  "sourceTextArtifacts": [
+    {
+      "kind": "source_midline_number",
+      "qid": "Q-C05-S-0034",
+      "page": 48,
+      "text": "B.杂凑 123.函数的输出长度固定"
+    }
+  ],
+  "content": {
+    "crossPageQuestions": [
+      {
+        "id": "Q-C01-S-0006",
+        "pages": [
+          6,
+          7
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C01-S-0017",
+        "pages": [
+          8,
+          9
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C01-S-0023",
+        "pages": [
+          9,
+          10
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C01-S-0028",
+        "pages": [
+          10,
+          11
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C01-S-0039",
+        "pages": [
+          12,
+          13
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C01-M-0004",
+        "pages": [
+          13,
+          14
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C01-M-0009",
+        "pages": [
+          14,
+          15
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C01-J-0001",
+        "pages": [
+          15,
+          16
+        ],
+        "lines": 3
+      },
+      {
+        "id": "Q-C02-S-0005",
+        "pages": [
+          17,
+          18
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C02-S-0026",
+        "pages": [
+          21,
+          22
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-S-0001",
+        "pages": [
+          25,
+          26
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C03-S-0007",
+        "pages": [
+          26,
+          27
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-S-0013",
+        "pages": [
+          27,
+          28
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-S-0019",
+        "pages": [
+          28,
+          29
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-S-0025",
+        "pages": [
+          29,
+          30
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-S-0031",
+        "pages": [
+          30,
+          31
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-M-0001",
+        "pages": [
+          31,
+          32
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C03-M-0007",
+        "pages": [
+          32,
+          33
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C04-S-0003",
+        "pages": [
+          34,
+          35
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C04-S-0008",
+        "pages": [
+          35,
+          36
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C04-S-0014",
+        "pages": [
+          36,
+          37
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C04-S-0025",
+        "pages": [
+          38,
+          39
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-S-0006",
+        "pages": [
+          43,
+          44
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0012",
+        "pages": [
+          44,
+          45
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-S-0018",
+        "pages": [
+          45,
+          46
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-S-0024",
+        "pages": [
+          46,
+          47
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0037",
+        "pages": [
+          48,
+          49
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0050",
+        "pages": [
+          50,
+          51
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0056",
+        "pages": [
+          51,
+          52
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-S-0062",
+        "pages": [
+          52,
+          53
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0069",
+        "pages": [
+          53,
+          54
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0075",
+        "pages": [
+          54,
+          55
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-S-0081",
+        "pages": [
+          55,
+          56
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0087",
+        "pages": [
+          56,
+          57
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0093",
+        "pages": [
+          57,
+          58
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-S-0099",
+        "pages": [
+          58,
+          59
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0105",
+        "pages": [
+          59,
+          60
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0118",
+        "pages": [
+          61,
+          62
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0124",
+        "pages": [
+          62,
+          63
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-S-0129",
+        "pages": [
+          63,
+          64
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C05-S-0134",
+        "pages": [
+          64,
+          65
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-S-0140",
+        "pages": [
+          65,
+          66
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-S-0145",
+        "pages": [
+          66,
+          67
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-S-0150",
+        "pages": [
+          67,
+          68
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C05-M-0005",
+        "pages": [
+          69,
+          70
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0023",
+        "pages": [
+          72,
+          73
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0036",
+        "pages": [
+          74,
+          75
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0048",
+        "pages": [
+          76,
+          77
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0054",
+        "pages": [
+          77,
+          78
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0067",
+        "pages": [
+          79,
+          80
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0073",
+        "pages": [
+          80,
+          81
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0086",
+        "pages": [
+          82,
+          83
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0092",
+        "pages": [
+          83,
+          84
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0098",
+        "pages": [
+          84,
+          85
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0103",
+        "pages": [
+          85,
+          86
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0108",
+        "pages": [
+          86,
+          87
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C05-M-0114",
+        "pages": [
+          87,
+          88
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C05-M-0119",
+        "pages": [
+          88,
+          89
+        ],
+        "lines": 10
+      },
+      {
+        "id": "Q-C05-M-0125",
+        "pages": [
+          89,
+          90
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C05-J-0001",
+        "pages": [
+          90,
+          91
+        ],
+        "lines": 2
+      },
+      {
+        "id": "Q-C05-J-0016",
+        "pages": [
+          91,
+          92
+        ],
+        "lines": 2
+      },
+      {
+        "id": "Q-C05-J-0057",
+        "pages": [
+          94,
+          95
+        ],
+        "lines": 2
+      },
+      {
+        "id": "Q-C05-J-0071",
+        "pages": [
+          95,
+          96
+        ],
+        "lines": 3
+      },
+      {
+        "id": "Q-C05-F-0004",
+        "pages": [
+          96,
+          97
+        ],
+        "lines": 3
+      },
+      {
+        "id": "Q-C05-F-0027",
+        "pages": [
+          98,
+          99
+        ],
+        "lines": 3
+      },
+      {
+        "id": "Q-C06-S-0004",
+        "pages": [
+          99,
+          100
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C06-S-0009",
+        "pages": [
+          100,
+          101
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C06-S-0021",
+        "pages": [
+          102,
+          103
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C06-S-0027",
+        "pages": [
+          103,
+          104
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C06-S-0037",
+        "pages": [
+          105,
+          106
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C06-S-0042",
+        "pages": [
+          106,
+          107
+        ],
+        "lines": 11
+      },
+      {
+        "id": "Q-C06-S-0046",
+        "pages": [
+          107,
+          108
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C06-S-0057",
+        "pages": [
+          109,
+          110
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C06-S-0063",
+        "pages": [
+          110,
+          111
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C06-S-0069",
+        "pages": [
+          111,
+          112
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C06-S-0080",
+        "pages": [
+          113,
+          114
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C06-S-0086",
+        "pages": [
+          114,
+          115
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C06-S-0091",
+        "pages": [
+          115,
+          116
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C06-S-0096",
+        "pages": [
+          116,
+          117
+        ],
+        "lines": 13
+      },
+      {
+        "id": "Q-C06-M-0007",
+        "pages": [
+          121,
+          122
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C06-M-0018",
+        "pages": [
+          123,
+          124
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C06-M-0029",
+        "pages": [
+          125,
+          126
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C06-M-0035",
+        "pages": [
+          126,
+          127
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C06-M-0039",
+        "pages": [
+          127,
+          128
+        ],
+        "lines": 14
+      },
+      {
+        "id": "Q-C06-M-0043",
+        "pages": [
+          128,
+          129
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C06-M-0048",
+        "pages": [
+          129,
+          130
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C06-M-0052",
+        "pages": [
+          130,
+          131
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C06-M-0058",
+        "pages": [
+          131,
+          132
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C06-J-0016",
+        "pages": [
+          133,
+          134
+        ],
+        "lines": 3
+      },
+      {
+        "id": "Q-C07-S-0004",
+        "pages": [
+          134,
+          135
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0009",
+        "pages": [
+          135,
+          136
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0015",
+        "pages": [
+          136,
+          137
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0020",
+        "pages": [
+          137,
+          138
+        ],
+        "lines": 10
+      },
+      {
+        "id": "Q-C07-S-0025",
+        "pages": [
+          138,
+          139
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C07-S-0030",
+        "pages": [
+          139,
+          140
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0046",
+        "pages": [
+          142,
+          143
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0052",
+        "pages": [
+          143,
+          144
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0057",
+        "pages": [
+          144,
+          145
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0063",
+        "pages": [
+          145,
+          146
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C07-S-0068",
+        "pages": [
+          146,
+          147
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0073",
+        "pages": [
+          147,
+          148
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0084",
+        "pages": [
+          149,
+          150
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-S-0090",
+        "pages": [
+          150,
+          151
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0005",
+        "pages": [
+          151,
+          152
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0011",
+        "pages": [
+          152,
+          153
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0017",
+        "pages": [
+          153,
+          154
+        ],
+        "lines": 8
+      },
+      {
+        "id": "Q-C07-M-0022",
+        "pages": [
+          154,
+          155
+        ],
+        "lines": 6
+      },
+      {
+        "id": "Q-C07-M-0028",
+        "pages": [
+          155,
+          156
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0034",
+        "pages": [
+          156,
+          157
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0045",
+        "pages": [
+          158,
+          159
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0051",
+        "pages": [
+          159,
+          160
+        ],
+        "lines": 9
+      },
+      {
+        "id": "Q-C07-M-0056",
+        "pages": [
+          160,
+          161
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0072",
+        "pages": [
+          163,
+          164
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0078",
+        "pages": [
+          164,
+          165
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0084",
+        "pages": [
+          165,
+          166
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0095",
+        "pages": [
+          167,
+          168
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0106",
+        "pages": [
+          169,
+          170
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0112",
+        "pages": [
+          170,
+          171
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-M-0123",
+        "pages": [
+          172,
+          173
+        ],
+        "lines": 7
+      },
+      {
+        "id": "Q-C07-J-0006",
+        "pages": [
+          173,
+          174
+        ],
+        "lines": 4
+      },
+      {
+        "id": "Q-C07-J-0027",
+        "pages": [
+          175,
+          176
+        ],
+        "lines": 3
+      }
+    ],
+    "mergedLineBreaks": 5633,
+    "emptyStemQuestions": [],
+    "suspiciousChars": [],
+    "privateUseChars": [
+      {
+        "char": "",
+        "codepoint": "U+F0F7",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      },
+      {
+        "char": "",
+        "codepoint": "U+F0F8",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      },
+      {
+        "char": "",
+        "codepoint": "U+F0F6",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      },
+      {
+        "char": "",
+        "codepoint": "U+F0E7",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      },
+      {
+        "char": "",
+        "codepoint": "U+F0E8",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      },
+      {
+        "char": "",
+        "codepoint": "U+F0E6",
+        "count": 1,
+        "examples": [
+          "Q-C05-F-0021"
+        ]
+      }
+    ]
+  },
+  "anomalies": [
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 39,
+      "text": "1. 国家网信部门A. 制定本行业、本领域关键信息基础设施认定规则",
+      "why": "unexpected_number",
+      "expected": 3
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 39,
+      "text": "2. 保护工作部门B. 统筹协调跨部门网络安全信息共享与威胁研判",
+      "why": "unexpected_number",
+      "expected": 3
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 39,
+      "text": "3. 运营者 C. 对专门安全管理机构负责人实施安全背景审查",
+      "why": "inline_option_marker"
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 39,
+      "text": "4. 公安机关 D. 依法指导监督全国关键信息基础设施安全保护",
+      "why": "unexpected_number",
+      "expected": 3
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 40,
+      "text": "1. 制造业领域的数据应用 A. 推动智能车间、智能工厂建设，构建制造业基础数据库",
+      "why": "unexpected_number",
+      "expected": 10
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 40,
+      "text": "2. 农业领域的数据应用 B. 制定自贸区数据出境清单，探索一般数据自由流动",
+      "why": "unexpected_number",
+      "expected": 10
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 40,
+      "text": "3. 公共服务领域的数据应用 C. 整合医疗、教育等数据资源，推进城市全域数字化转型",
+      "why": "unexpected_number",
+      "expected": 10
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C04",
+      "sectionType": "multiple",
+      "page": 40,
+      "text": "4. 数据跨境流通试点 D. 建设农业生产数智化场景，提升数字化精准管理水平",
+      "why": "unexpected_number",
+      "expected": 10
+    },
+    {
+      "kind": "source_midline_number",
+      "qid": "Q-C05-S-0034",
+      "page": 48,
+      "text": "B.杂凑 123.函数的输出长度固定"
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 100,
+      "text": "1. DDoS 攻击 A. 强制使用强口令策略",
+      "why": "unexpected_number",
+      "expected": 7
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 100,
+      "text": "2. 中间人攻击 B. 部署流量清洗系统",
+      "why": "unexpected_number",
+      "expected": 7
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 100,
+      "text": "3. 固件漏洞利用 C. 定期更新设备固件",
+      "why": "unexpected_number",
+      "expected": 7
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 100,
+      "text": "4. 弱口令爆破 D. 启用端到端加密通信",
+      "why": "unexpected_number",
+      "expected": 7
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 116,
+      "text": "1. 神经网络梯度反向传播 A. 模型窃取攻击（Model Stealing）",
+      "why": "unexpected_number",
+      "expected": 97
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 116,
+      "text": "2. 自然语言处理（NLP）预训练B. 深度伪造（Deepfake）音频生成",
+      "why": "unexpected_number",
+      "expected": 97
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 116,
+      "text": "3. 强化学习的策略可解释性低 C. 自动化钓鱼邮件生成",
+      "why": "unexpected_number",
+      "expected": 97
+    },
+    {
+      "kind": "rejected_numbered_line",
+      "chapterCode": "C06",
+      "sectionType": "single",
+      "page": 116,
+      "text": "4. 生成对抗网络（GAN） D. 黑盒模型决策过程不可控",
+      "why": "unexpected_number",
+      "expected": 97
+    }
+  ],
+  "hashes": {
+    "sourceText": "394261db273ffe94379717fce3b580cd7ae79441e2b6f4d48c58d62e31acb983",
+    "bank": "1460dedd2c20ed1806d3d5fa9a8713e920f54c73bf6c3f2dfe85100f035564c9"
+  },
+  "warnings": [],
+  "errors": [],
+  "validatorOutput": "bank validator -- src/data/bank.json   (spec v1.1.0 5.9)\nschemaVersion 1.0.0  bankVersion 2026.08-pdf1  generatedAt 2026-09-16T20:00:00+08:00\n\ncounts\n  total questions        : 1051   (printed 1050 + 1 unnumbered)\n  by section type        : single=491  multiple=358  judge=172  blank=30\n  by response mode       : single=492  multiple=357  judge=172  blank=30\n  by part                : B=215  P=836   by difficulty: 1=172 2=534 3=345\n\nchapter / section table (blocks, printed)\n  C01 单选题        blocks=    40/40   printed=    40/40   OK\n  C01 多选题        blocks=    13/13   printed=    13/13   OK\n  C01 判断题        blocks=    12/12   printed=    12/12   OK\n  C02 单选题        blocks=    30/30   printed=    30/30   OK\n  C02 多选题        blocks=    10/10   printed=    10/10   OK\n  C02 判断题        blocks=    10/10   printed=    10/10   OK\n  C03 单选题        blocks=    35/35   printed=    35/35   OK\n  C03 多选题        blocks=    10/10   printed=    10/10   OK\n  C03 判断题        blocks=    10/10   printed=    10/10   OK\n  C04 单选题        blocks=    25/25   printed=    25/25   OK\n  C04 多选题        blocks=    10/10   printed=    10/10   OK\n  C04 判断题        blocks=    10/10   printed=    10/10   OK\n  C05 单选题        blocks=   156/156  printed=   155/155  OK\n  C05 多选题        blocks=   130/130  printed=   130/130  OK\n  C05 判断题        blocks=    80/80   printed=    80/80   OK\n  C05 填空题        blocks=    30/30   printed=    30/30   OK\n  C06 单选题        blocks=   115/115  printed=   115/115  OK\n  C06 多选题        blocks=    60/60   printed=    60/60   OK\n  C06 判断题        blocks=    20/20   printed=    20/20   OK\n  C07 单选题        blocks=    90/90   printed=    90/90   OK\n  C07 多选题        blocks=   125/125  printed=   125/125  OK\n  C07 判断题        blocks=    30/30   printed=    30/30   OK\n\nanswers\n  answerStatus=ok          : 1051\n  answerStatus=missing     : 0\n  answer.length=0          : 0\n  blank questions          : 30 (all have answers: true)\n  manually recorded answers: 1 -> Q-C05-F-0007 (answer=[\"16\"], rawAnswer=null, needsReview=true)\n  judge answer distribution: 对=81  错=91\n  needsReview questions    : 5 -> Q-C05-S-0060,Q-C05-F-0007,Q-C06-S-0004,Q-C06-M-0008,Q-C07-S-0027\n\nknowledge tags\n  tag coverage (>=1 keyword rule): 83.7%  (880/1051)  min 80%\n  chapter-fallback only          : 171\n  tags == chapter fallback tag   : 229 (C07 fallback 标准规范 is also rule #24)\n  distinct tags used             : 38\n  tags outside vocabulary        : 0\n\nintegrity\n  duplicate ids            : 0\n  missing required fields  : 0\n  option key problems      : 0\n  printedNo null           : 1 -> Q-C05-S-0060\n  matching/连线 questions  : 4 -> Q-C04-M-0002,Q-C04-M-0009,Q-C06-S-0006,Q-C06-S-0096\n\n5.9 checklist\n  S01 questions.length                             PASS  questions=1051 expected 1051\n  S02 answerStatus=\"ok\" count                      PASS  ok=1051 expected 1051\n  S03 answerStatus=\"missing\" count                 PASS  missing=0 expected 0\n  S04 needsReview=true count and ids               PASS  needsReview(5)=Q-C05-S-0060,Q-C05-F-0007,Q-C06-S-0004,Q-C06-M-0008,Q-C07-S-0027\n  S05 printedNo=null count                         PASS  printedNo=null: Q-C05-S-0060\n  S06 per chapter/section counts (5.2.1)           PASS  all 22 cells match (blocks + printed + 1..N sequence)\n  S07 sectionType counts                           PASS  sectionType={\"single\":491,\"multiple\":358,\"judge\":172,\"blank\":30} expected {\"single\":491,\"multiple\":358,\"judge\":172,\"blank\":30}\n  S08 responseMode counts                          PASS  responseMode={\"single\":492,\"multiple\":357,\"judge\":172,\"blank\":30} expected {\"single\":492,\"multiple\":357,\"judge\":172,\"blank\":30}\n  S09 sectionType!==responseMode count and ids     PASS  mismatch(5)=Q-C04-M-0002,Q-C04-M-0009,Q-C06-S-0004,Q-C06-M-0008,Q-C07-S-0027\n  S10 judge answer distribution                    PASS  对=81 错=91 expected 81/91\n  S11 judge answer domain {对,错}                    PASS  bad judge answers=0\n  S12 multiple-section answer shape                PASS  n=358 lettersOk=true ascendingUnique=true singleLetter=3\n  S13 single-section answer shape                  PASS  n=491 oneLetter=489 multiLetter=2 (Q-C06-S-0004,Q-C07-S-0027)\n  S14 blank-section answer shape                   PASS  n=30 withAnswer=30 manual(Q-C05-F-0007)=[\"16\"]/rawAnswer=null/needsReview=true\n  S15 answer.length >= 1 count / = 0 count         PASS  withAnswer=1051 empty=0 expected 1051/0\n  S16 manually recorded answers                    PASS  manual=1 -> Q-C05-F-0007(rawAnswer=null,needsReview=true)\n  S17 source.pages                                 PASS  source.pages=199\n  S18 tag coverage                                 PASS  len1..3ok=true unclassified=0 outsideVocab=0 specific=83.7%\n  S19 matching/连线 questions                        PASS  matching(4)=Q-C04-M-0002,Q-C04-M-0009,Q-C06-S-0006,Q-C06-S-0096\n  S20 id uniqueness and format (guard)             PASS  duplicates=0 badFormat=0\n  S21 chapter tree consistency (guard)             PASS  chapters[] tree matches questions\n  S22 source metadata and versions (guard)         PASS  schemaVersion=1.0.0 bankVersion=2026.08-pdf1 generatedAt=2026-09-16T20:00:00+08:00 fileName=密码赛题库.pdf theoryBlocks=1051 printedQuestions=1050 excludedCount=12\n\nextra structural guards\n  G01 PASS  printed questions=1050 expected 1050\n  G02 PASS  ok=1051 empty=0\n  G03 PASS  missing fields=0\n  G04 PASS  wrong field types=0\n  G05 PASS  option problems=0\n  G06 PASS  difficulty/blankCount problems=0\n  G07 PASS  answerStatus=ok with rawAnswer=null outside the manual list=0\n  G08 PASS  theoryBlocks=1051 = printedQuestions(1050) + 1 unnumbered\n\nchecks: 30/30 passed (5.9 items: 22)\nquestions=1051 single=491 multiple=358 judge=172 blank=30 tagCoverage=83.7% missingAnswers=0 duplicateIds=0\nRESULT: PASS\nok: true\n"
+}

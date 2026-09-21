@@ -1,0 +1,1696 @@
+{
+  "schemaVersion": "1.0.0",
+  "bankVersion": "fixture-1",
+  "generatedAt": "2026-09-16T20:00:00+08:00",
+  "fixture": true,
+  "source": {
+    "fileName": "密码赛题库.pdf",
+    "pages": 199,
+    "theoryBlocks": 38,
+    "printedQuestions": 37,
+    "excludedCount": 12,
+    "excludedReason": "第三部分实操题不纳入（用户决策 D12）"
+  },
+  "chapters": [
+    {
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "chapterTotal": 8,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 4
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 2
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "chapterTotal": 5,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 3
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 1
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "chapterCode": "C03",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码管理规章制度",
+      "chapterTotal": 4,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 2
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 1
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "chapterCode": "C04",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "其他政策法规条例",
+      "chapterTotal": 4,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 2
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 1
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "chapterTotal": 9,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 3
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 2
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 2
+        },
+        {
+          "sectionType": "blank",
+          "typeName": "填空题",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "chapterCode": "C06",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码前沿技术",
+      "chapterTotal": 4,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 2
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 1
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "chapterCode": "C07",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "标准题",
+      "chapterTotal": 4,
+      "sections": [
+        {
+          "sectionType": "single",
+          "typeName": "单选题",
+          "count": 2
+        },
+        {
+          "sectionType": "multiple",
+          "typeName": "多选题",
+          "count": 1
+        },
+        {
+          "sectionType": "judge",
+          "typeName": "判断题",
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q-C01-S-0001",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "根据《中华人民共和国密码法》，关于密码分类与管理的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "密码法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-S-0002",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "根据《中华人民共和国密码法》，关于密码分类与管理的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "密码法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-S-0003",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 3,
+      "printedNo": 3,
+      "stem": "根据《中华人民共和国密码法》，关于密码分类与管理的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（3）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（3）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（3）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（3）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "密码法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 4,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-S-0004",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 4,
+      "printedNo": 4,
+      "stem": "根据《中华人民共和国密码法》，关于密码分类与管理的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（4）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（4）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（4）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（4）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "密码法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 5,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-M-0001",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据《中华人民共和国密码法》，以下关于密码管理部门职责的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-M-0002",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "依据《中华人民共和国密码法》，以下关于密码管理部门职责的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 2,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-J-0001",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "核心密码、普通密码用于保护国家秘密信息，商用密码用于保护不属于国家秘密的信息。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "密码法律法规"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C01-J-0002",
+      "chapterCode": "C01",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码法律法规",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "核心密码、普通密码用于保护国家秘密信息，商用密码用于保护不属于国家秘密的信息。",
+      "options": [],
+      "answer": [
+        "错"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "错",
+      "tags": [
+        "密码法律法规"
+      ],
+      "difficulty": 1,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C02-S-0001",
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "根据《中华人民共和国网络安全法》，网络运营者应当履行的安全保护义务包括（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "网络安全法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C02-S-0002",
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "根据《中华人民共和国网络安全法》，网络运营者应当履行的安全保护义务包括（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "网络安全法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C02-S-0003",
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 3,
+      "printedNo": 3,
+      "stem": "根据《中华人民共和国网络安全法》，网络运营者应当履行的安全保护义务包括（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（3）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（3）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（3）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（3）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "网络安全法"
+      ],
+      "difficulty": 1,
+      "sourcePage": 4,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C02-M-0001",
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "根据《中华人民共和国网络安全法》，以下属于关键信息基础设施运营者义务的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C02-J-0001",
+      "chapterCode": "C02",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "网络安全法律法规",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "关键信息基础设施的运营者应当自行或者委托网络安全服务机构对其网络的安全性和可能存在的风险每年至少进行一次检测评估。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "网络安全法律法规"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C03-S-0001",
+      "chapterCode": "C03",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码管理规章制度",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据《商用密码管理条例》，商用密码检测机构应当满足下列哪项要求？（ ）",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "部门规章"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C03-S-0002",
+      "chapterCode": "C03",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码管理规章制度",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "依据《商用密码管理条例》，商用密码检测机构应当满足下列哪项要求？（ ）",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "部门规章"
+      ],
+      "difficulty": 1,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C03-M-0001",
+      "chapterCode": "C03",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码管理规章制度",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据《商用密码管理条例》，下列属于商用密码从业单位义务的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C03-J-0001",
+      "chapterCode": "C03",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "密码管理规章制度",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "商用密码检测机构应当独立、客观、公正地开展检测工作，并对检测结果负责。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "密码管理规章制度"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C04-S-0001",
+      "chapterCode": "C04",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "其他政策法规条例",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据《江苏省密码应用与创新发展管理办法》，关于密码应用推进工作的表述，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "地方性法规"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C04-S-0002",
+      "chapterCode": "C04",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "其他政策法规条例",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "依据《江苏省密码应用与创新发展管理办法》，关于密码应用推进工作的表述，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "地方性法规"
+      ],
+      "difficulty": 1,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C04-M-0001",
+      "chapterCode": "C04",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "其他政策法规条例",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据国家密码管理政策文件，以下关于密码应用的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C04-J-0001",
+      "chapterCode": "C04",
+      "partCode": "B",
+      "partName": "基础题",
+      "chapterName": "其他政策法规条例",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "省级密码管理部门负责本行政区域内商用密码的管理工作。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "其他政策法规条例"
+      ],
+      "difficulty": 1,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-S-0001",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "在 SM4 分组密码算法中，关于密钥扩展与轮函数结构的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "SM4",
+        "分组密码"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-S-0002",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "multiple",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "在 SM4 分组密码算法中，关于密钥扩展与轮函数结构的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "A",
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "AB",
+      "tags": [
+        "SM4",
+        "分组密码"
+      ],
+      "difficulty": 2,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": true,
+      "reviewReason": "type_mismatch"
+    },
+    {
+      "id": "Q-C05-S-0003",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 3,
+      "printedNo": null,
+      "stem": "在 SM4 分组密码算法中，关于密钥扩展与轮函数结构的说法，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（3）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（3）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（3）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（3）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "SM4",
+        "分组密码"
+      ],
+      "difficulty": 2,
+      "sourcePage": 4,
+      "blankCount": 0,
+      "needsReview": true,
+      "reviewReason": "printed_number_missing"
+    },
+    {
+      "id": "Q-C05-M-0001",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "以下关于杂凑算法与消息鉴别码的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "A",
+      "tags": [
+        "杂凑与消息鉴别"
+      ],
+      "difficulty": 3,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-M-0002",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "以下关于杂凑算法与消息鉴别码的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "杂凑与消息鉴别"
+      ],
+      "difficulty": 3,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-J-0001",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "SM3 密码杂凑算法的输出摘要长度为 256 比特。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "密码学基础"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-J-0002",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "SM3 密码杂凑算法的输出摘要长度为 256 比特。",
+      "options": [],
+      "answer": [
+        "错"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "错",
+      "tags": [
+        "密码学基础"
+      ],
+      "difficulty": 2,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-F-0001",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "blank",
+      "typeName": "填空题",
+      "responseMode": "blank",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "SM4 分组密码算法的分组长度为 128 比特，其密钥长度为 ______ 比特，轮数为 32 轮。",
+      "options": [],
+      "answer": [
+        "128"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "128",
+      "tags": [
+        "SM3",
+        "杂凑与消息鉴别"
+      ],
+      "difficulty": 3,
+      "sourcePage": 2,
+      "blankCount": 1,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C05-F-0002",
+      "chapterCode": "C05",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码学",
+      "sectionType": "blank",
+      "typeName": "填空题",
+      "responseMode": "blank",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "SM3 密码杂凑算法输出摘要长度为 ______ 比特。",
+      "options": [],
+      "answer": [],
+      "answerStatus": "missing",
+      "rawAnswer": null,
+      "tags": [
+        "SM3",
+        "杂凑与消息鉴别"
+      ],
+      "difficulty": 3,
+      "sourcePage": 3,
+      "blankCount": 1,
+      "needsReview": true,
+      "reviewReason": "answer_missing"
+    },
+    {
+      "id": "Q-C06-S-0001",
+      "chapterCode": "C06",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码前沿技术",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "面向抗量子迁移的密码前沿技术中，下列关于后量子密码的表述，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "密码前沿技术"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C06-S-0002",
+      "chapterCode": "C06",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码前沿技术",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "面向抗量子迁移的密码前沿技术中，下列关于后量子密码的表述，正确的是（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "部门规章"
+      ],
+      "difficulty": 2,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C06-M-0001",
+      "chapterCode": "C06",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码前沿技术",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "以下关于量子密钥分发（QKD）与后量子密码的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "量子密码"
+      ],
+      "difficulty": 3,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C06-J-0001",
+      "chapterCode": "C06",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "密码前沿技术",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "抗量子密码算法可以完全替代现有的公钥密码算法，无需考虑迁移成本。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "密码前沿技术"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C07-S-0001",
+      "chapterCode": "C07",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "标准题",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据 GB/T 39786 的相关要求，信息系统密码应用基本要求分为几级？（ ）",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（1）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（1）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（1）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（1）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "标准规范"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C07-S-0002",
+      "chapterCode": "C07",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "标准题",
+      "sectionType": "single",
+      "typeName": "单选题",
+      "responseMode": "single",
+      "seq": 2,
+      "printedNo": 2,
+      "stem": "依据 GB/T 39786 的相关要求，信息系统密码应用基本要求分为几级？（ ）",
+      "options": [
+        {
+          "key": "A",
+          "text": "密码管理部门（2）"
+        },
+        {
+          "key": "B",
+          "text": "保密行政管理部门（2）"
+        },
+        {
+          "key": "C",
+          "text": "国家网信部门（2）"
+        },
+        {
+          "key": "D",
+          "text": "市场监督管理部门（2）"
+        }
+      ],
+      "answer": [
+        "B"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "B",
+      "tags": [
+        "标准规范"
+      ],
+      "difficulty": 2,
+      "sourcePage": 3,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C07-M-0001",
+      "chapterCode": "C07",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "标准题",
+      "sectionType": "multiple",
+      "typeName": "多选题",
+      "responseMode": "multiple",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "依据 GM/T 标准体系，以下关于密码标准分类的说法，正确的有（ ）。",
+      "options": [
+        {
+          "key": "A",
+          "text": "建立统一的商用密码监督管理信息平台"
+        },
+        {
+          "key": "B",
+          "text": "开展随机抽查活动"
+        },
+        {
+          "key": "C",
+          "text": "将监管信息与社会信用体系相衔接"
+        },
+        {
+          "key": "D",
+          "text": "以上均是"
+        }
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "ABC",
+      "tags": [
+        "商用密码管理条例"
+      ],
+      "difficulty": 3,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    },
+    {
+      "id": "Q-C07-J-0001",
+      "chapterCode": "C07",
+      "partCode": "P",
+      "partName": "专业题",
+      "chapterName": "标准题",
+      "sectionType": "judge",
+      "typeName": "判断题",
+      "responseMode": "judge",
+      "seq": 1,
+      "printedNo": 1,
+      "stem": "GB/T 39786 规定了信息系统密码应用的基本要求，并划分为五个等级。",
+      "options": [],
+      "answer": [
+        "对"
+      ],
+      "answerStatus": "ok",
+      "rawAnswer": "对",
+      "tags": [
+        "标准规范"
+      ],
+      "difficulty": 2,
+      "sourcePage": 2,
+      "blankCount": 0,
+      "needsReview": false,
+      "reviewReason": null
+    }
+  ]
+}
