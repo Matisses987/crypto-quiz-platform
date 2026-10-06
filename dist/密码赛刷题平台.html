@@ -199,7 +199,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 <div id="banner" class="banner error hidden"></div>
 
 <header class="topbar">
-  <div class="brand">密码赛刷题平台<span class="ver">v1.1.0 · 题库 2026.08-pdf1</span></div>
+  <div class="brand">密码赛刷题平台<span class="ver">v1.1.1 · 题库 2026.08-pdf1</span></div>
   <nav class="nav" id="nav">
     <button data-nav="home">首页</button>
     <button data-nav="setup">分类练习</button>
@@ -223,9 +223,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 // 冻结常量（依据 docs/需求规格.md 9.1 / 13.6 / 5.9 / 10.2）
 // 说明：所有模块内顶层声明一律带模块前缀，便于 tools/build.mjs 做 ESM -> 单文件拼接。
 
-// 应用版本（t37：1.0.0 -> 1.1.0，用户在导入覆盖层/错题本移出复活/首页数字/模拟赛倒计时与导航等修复后要求升版）。
+// 应用版本（t53：1.1.0 -> 1.1.1，修复「导入队友记录」文件框缺 data-act 导致导入完全不可用）。
 // 注意：下面三个 schema 版本必须保持 "1.0.0"，否则队友已导出的 JSON 会被 ioport 的 E_VERSION 拒收、旧本地数据也会被判不兼容。
-const cn_VERSION = "1.1.0";
+const cn_VERSION = "1.1.1";
 const cn_BANK_SCHEMA_VERSION = "1.0.0";
 const cn_STORE_SCHEMA_VERSION = "1.0.0";
 const cn_EXPORT_SCHEMA_VERSION = "1.0.0";
@@ -5117,7 +5117,7 @@ if (typeof globalThis !== "undefined") {
       "</div></div>" +
 
       '<div class="card"><h2>导入队友记录</h2><div class="row">' +
-      '<input type="file" id="importFile" accept=".json,application/json">' +
+      '<input type="file" id="importFile" data-act="importFile" accept=".json,application/json">' +
       '<span class="muted">重复导入不会重复计数（按 昵称+题号+时间戳 去重）。</span></div>' + reportHtml + "</div>" +
 
       '<div class="card"><h2>导入历史</h2><div class="table-wrap" style="max-height:260px"><table><thead><tr><th>文件</th><th>时间</th><th>昵称</th><th class="num">新增</th><th class="num">重复</th><th class="num">跳过</th></tr></thead><tbody>' +

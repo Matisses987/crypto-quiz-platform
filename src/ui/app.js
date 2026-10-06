@@ -1323,7 +1323,7 @@
       "</div></div>" +
 
       '<div class="card"><h2>导入队友记录</h2><div class="row">' +
-      '<input type="file" id="importFile" accept=".json,application/json">' +
+      '<input type="file" id="importFile" data-act="importFile" accept=".json,application/json">' +
       '<span class="muted">重复导入不会重复计数（按 昵称+题号+时间戳 去重）。</span></div>' + reportHtml + "</div>" +
 
       '<div class="card"><h2>导入历史</h2><div class="table-wrap" style="max-height:260px"><table><thead><tr><th>文件</th><th>时间</th><th>昵称</th><th class="num">新增</th><th class="num">重复</th><th class="num">跳过</th></tr></thead><tbody>' +

@@ -19,3 +19,4 @@ import "./build.test.mjs";
 import "./version.test.mjs";
 import "./source.lint.test.mjs";
 import "./ui.smoke.test.mjs";
+import "./ui.import.test.mjs";

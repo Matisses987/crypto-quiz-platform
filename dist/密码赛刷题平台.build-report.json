@@ -1,6 +1,6 @@
 {
-  "builtAt": "2026-09-21T11:46:45.651Z",
-  "appVersion": "1.1.0",
+  "builtAt": "2026-10-06T13:07:57.486Z",
+  "appVersion": "1.1.1",
   "bankPath": "src/data/bank.json",
   "bankVersion": "2026.08-pdf1",
   "fixture": false,
@@ -71,7 +71,7 @@
       "iframe/object/embed": 0
     }
   },
-  "bytes": 1056911,
+  "bytes": 1056901,
   "ok": true,
   "artifactCheck": {
     "ok": true,

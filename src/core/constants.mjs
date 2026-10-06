@@ -1,9 +1,9 @@
 // 冻结常量（依据 docs/需求规格.md 9.1 / 13.6 / 5.9 / 10.2）
 // 说明：所有模块内顶层声明一律带模块前缀，便于 tools/build.mjs 做 ESM -> 单文件拼接。
 
-// 应用版本（t37：1.0.0 -> 1.1.0，用户在导入覆盖层/错题本移出复活/首页数字/模拟赛倒计时与导航等修复后要求升版）。
+// 应用版本（t53：1.1.0 -> 1.1.1，修复「导入队友记录」文件框缺 data-act 导致导入完全不可用）。
 // 注意：下面三个 schema 版本必须保持 "1.0.0"，否则队友已导出的 JSON 会被 ioport 的 E_VERSION 拒收、旧本地数据也会被判不兼容。
-export const cn_VERSION = "1.1.0";
+export const cn_VERSION = "1.1.1";
 export const cn_BANK_SCHEMA_VERSION = "1.0.0";
 export const cn_STORE_SCHEMA_VERSION = "1.0.0";
 export const cn_EXPORT_SCHEMA_VERSION = "1.0.0";
