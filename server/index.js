@@ -232,6 +232,17 @@ const server = http.createServer((req, res) => {
 });
 
 /**
+ * keep-alive 超时：默认 5 秒太短，经 frpc / cloudflared 这类反代时会出现
+ * 「服务端刚准备关掉空闲连接、反代正好在这条连接上发请求」→ 浏览器侧表现为
+ * net::ERR_CONNECTION_CLOSED（偶发、只在提交这类 POST 上被用户看见）。
+ * 把空闲窗口拉到 72 秒（大于常见反代的 60 秒空闲超时），让关连接的决定
+ * 总是由反代先做出，node 侧就不会成为那个「主动 RST 的人」。
+ */
+server.keepAliveTimeout = 72 * 1000;
+server.headersTimeout = 75 * 1000;
+server.requestTimeout = 120 * 1000;
+
+/**
  * 页面产物缺失时自动构建一次。
  * `public/` 是构建产物（被 .gitignore 忽略），克隆仓库后只有源码没有 index.html；
  * 不自动构建的话服务端会一路 404「页面不存在」，看起来像坏掉了。

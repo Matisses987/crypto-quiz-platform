@@ -72,33 +72,79 @@
     return fallback || "操作失败";
   }
 
+  /**
+   * 统一请求封装。
+   *
+   * 两条与「网络抖动」有关的加固，都是手机走反向隧道（frpc / cloudflared）时
+   * 真机上踩出来的：
+   *   1. 超时：fetch 本身不设超时，隧道半死时 promise 会一直悬着，
+   *      调用方（比如练习提交）的 .then/.catch 都不执行，界面就卡住。
+   *   2. 网络层重试一次：ERR_CONNECTION_CLOSED / ERR_EMPTY_RESPONSE 这类
+   *      连接被单方面关闭的错误是幂等安全的（请求根本没到服务端或没被处理），
+   *      重试一次就能救回来；HTTP 4xx/5xx 不重试，那是业务结果。
+   */
+  var API_TIMEOUT_MS = 20000;
   function api(path, options) {
     var opts = options || {};
-    var init = {
-      method: opts.method || "GET",
-      credentials: "same-origin",
-      headers: {},
-    };
-    if (opts.body !== undefined) {
-      init.headers["Content-Type"] = "application/json";
-      init.body = JSON.stringify(opts.body);
+    var attempts = typeof opts.retry === "number" ? opts.retry + 1 : 2;
+    var timeoutMs = typeof opts.timeoutMs === "number" ? opts.timeoutMs : API_TIMEOUT_MS;
+
+    function once() {
+      var init = {
+        method: opts.method || "GET",
+        credentials: "same-origin",
+        headers: {},
+      };
+      if (opts.body !== undefined) {
+        init.headers["Content-Type"] = "application/json";
+        init.body = JSON.stringify(opts.body);
+      }
+      var controller = null;
+      var timer = null;
+      if (typeof AbortController === "function") {
+        controller = new AbortController();
+        init.signal = controller.signal;
+        timer = window.setTimeout(function () { controller.abort(); }, timeoutMs);
+      }
+      var clearTimer = function () {
+        if (timer !== null) { window.clearTimeout(timer); timer = null; }
+      };
+      return fetch(path, init).then(
+        function (res) {
+          clearTimer();
+          if (res.status === 204) return null;
+          return res.text().then(function (text) {
+            var data = null;
+            if (text) {
+              try { data = JSON.parse(text); } catch (err) { data = null; }
+            }
+            if (res.status === 401) {
+              // 会话过期：回登录页（保留当前题库参数）
+              if (S.user) { S.user = null; renderAuthGate("登录已过期，请重新登录"); }
+              throw httpError(401, (data && data.error) || "请先登录");
+            }
+            if (!res.ok) throw httpError(res.status, (data && data.error) || "请求失败（" + res.status + "）");
+            return data;
+          });
+        },
+        function (err) {
+          clearTimer();
+          // fetch 自身抛错 = 网络层失败（连接被关、超时、断网），标个记号好判断
+          var wrapped = httpError(0, "网络异常，请检查连接");
+          wrapped.network = true;
+          wrapped.cause = err;
+          throw wrapped;
+        }
+      );
     }
-    return fetch(path, init).then(function (res) {
-      if (res.status === 204) return null;
-      return res.text().then(function (text) {
-        var data = null;
-        if (text) {
-          try { data = JSON.parse(text); } catch (err) { data = null; }
-        }
-        if (res.status === 401) {
-          // 会话过期：回登录页（保留当前题库参数）
-          if (S.user) { S.user = null; renderAuthGate("登录已过期，请重新登录"); }
-          throw httpError(401, (data && data.error) || "请先登录");
-        }
-        if (!res.ok) throw httpError(res.status, (data && data.error) || "请求失败（" + res.status + "）");
-        return data;
+
+    function loop(left) {
+      return once().catch(function (err) {
+        if (left > 1 && err && err.network) return loop(left - 1);
+        throw err;
       });
-    });
+    }
+    return loop(attempts);
   }
 
   function logout() {
