@@ -705,7 +705,7 @@
       entry("setup-random", "全库随机", "从 " + S.bank.questions.length + " 题中随机抽题") +
       entry("wrongbook", "错题本", "重练错题、手动移出、查看自动移出记录") +
       entry("stats", "学习统计", "每题对错次数、掌握指数、薄弱榜单") +
-      entry("team", "团队对比", "导入队友 JSON，统计团队易错题") +
+      entry("team", "团队对比", "本服务器全部账号的团队易错题与交叉矩阵") +
       entry("io", "导出 / 导入", "按自然日导出，导入后自动合并去重") +
       entry("mock", "模拟选拔赛", "100 题 / 60 分钟 / 100 分 / 到点自动交卷") +
       entry("review", "校对纠错", "标疑问、手动改答案（可随导出共享）") +
@@ -724,7 +724,7 @@
         : (S.bankValidation ? '<span class="badge red">服务端校验发现问题 ' + S.bankValidation.errors.length + " 项</span>" : '<span class="badge gray">未校验（题库由服务端导入，前端不重复校验）</span>')) +
       "；待校对 " + needsReview + " 题，缺答案 " + missing + " 题（缺答案题不参与出题，可由校对面板补录）。</div>" +
       '<div class="row mt12"><button class="primary" data-act="export-backup">导出全部备份</button>' +
-      '<button data-act="io-page">导入队友记录</button>' +
+      '<button data-act="io-page">导入历史记录</button>' +
       '<button data-act="go" data-page="review">数据维护与危险操作</button></div>' +
       '<div class="muted mt8">「清空本地数据」等危险操作已移出首页，放在「校对纠错」页底部的危险操作区（仍为二次确认）。</div></div>'
     );
@@ -1645,7 +1645,7 @@
       '<div class="item"><div class="k">团队易错题</div><div class="v">' + team.teamWrongQuestions.length + "</div></div>" +
       '<div class="item"><div class="k">团队掌握指数</div><div class="v small">' + masteryText(team.teamMastery.index, team.teamMastery.insufficient) + "</div></div></div></div>" +
 
-      (emptyTeam ? '<div class="card"><div class="muted">还没有可对比的队友数据：等其他账号开始答题后再回来刷新。</div></div>' : "") +
+      (emptyTeam ? '<div class="card"><div class="muted">还没有可对比的队友数据：等其他账号开始答题后再回来刷新（本页统计的是本服务器上全部账号）。</div></div>' : "") +
 
       '<div class="card"><h2>成员对比</h2><div class="table-wrap"><table><thead><tr><th>账号昵称</th><th class="num">作答</th><th class="num">正确</th><th class="num">正确率</th><th class="num">掌握指数</th><th class="num">个人易错题</th><th class="num">模拟赛最高分</th></tr></thead><tbody>' +
       (memberRows.length ? memberRows.join("") : '<tr><td colspan="7" class="muted">暂无成员</td></tr>') + "</tbody></table></div></div>" +
@@ -1751,7 +1751,7 @@
       (previewError ? '<span class="badge red">' + esc(previewError) + "</span>" : "本次将导出 " + preview.counts.records + " 条作答记录、" + preview.counts.sessions + " 场模拟赛、覆盖层 " + preview.counts.overrides + " 条（覆盖层整体导出，不按日期裁剪）。") +
       "</div></div>" +
 
-      '<div class="card"><h2>导入队友记录</h2><div class="row">' +
+      '<div class="card"><h2>导入他人导出的记录</h2><div class="row">' +
       '<input type="file" id="importFile" data-act="importFile" accept=".json,application/json">' +
       '<span class="muted">服务端合并：重复导入不会重复计数（按 昵称+题号+时间戳 去重），错题本按最后修改时间取新。</span></div>' + reportHtml + "</div>" +
 
@@ -2229,14 +2229,19 @@
     if (M.phase === "running") ensureMockTimer();
     if (M.phase === "setup") {
       var dist = CQP.computeMockDistribution(S.bank.questions, CQP.MOCK_LIMITS.count);
+      // 题库不足 100 题时按实际可用题数出卷（服务端 buildMockPaper 会降级），这里如实显示
+      var paperCount = dist.byType.blank + dist.byType.multiple + dist.byType.single + dist.byType.judge;
+      var full = paperCount >= CQP.MOCK_LIMITS.count;
       return (
         '<div class="card"><h1>模拟选拔赛</h1>' +
-        '<div class="kv"><div class="item"><div class="k">题量</div><div class="v">100 题</div></div>' +
+        '<div class="kv"><div class="item"><div class="k">题量</div><div class="v">' + paperCount + " 题" +
+        (full ? "" : ' <span class="badge yellow">题库不足 100 题</span>') + "</div></div>" +
         '<div class="item"><div class="k">限时</div><div class="v">60 分钟</div></div>' +
-        '<div class="item"><div class="k">满分</div><div class="v">100 分</div></div>' +
+        '<div class="item"><div class="k">满分</div><div class="v">' + paperCount + " 分</div></div>" +
         '<div class="item"><div class="k">交卷</div><div class="v small">手动交卷（二次确认）或到点自动交卷</div></div></div>' +
-        '<div class="muted mt12">按官方赛制：理论知识 100 题 / 60 分钟 / 100 分，超时系统自动提交。<br>' +
-        "抽题分布（按题库池占比的两级最大余数法）：填空 " + dist.byType.blank + " / 多选 " + dist.byType.multiple + " / 单选 " + dist.byType.single + " / 判断 " + dist.byType.judge +
+        '<div class="muted mt12">按官方赛制：理论知识 100 题 / 60 分钟 / 100 分（每题 1 分），超时系统自动提交。' +
+        (full ? "" : "<br><b>当前题库只有 " + paperCount + " 道可答题，本场按 " + paperCount + " 题 / " + paperCount + " 分计</b>（内置题库满 100 题）。") +
+        "<br>抽题分布（按题库池占比的两级最大余数法）：填空 " + dist.byType.blank + " / 多选 " + dist.byType.multiple + " / 单选 " + dist.byType.single + " / 判断 " + dist.byType.judge +
         "；章分布 " + CQP.CHAPTER_CODES.map(function (code) { return code.slice(1) + ":" + dist.byChapter[code]; }).join(" ") + "。<br>" +
         "答题期间不显示对错与答案、不提供信心选择；交卷后按 填空→多选→单选→判断 给出得分与用时；模拟赛不自动写错题本（成绩页可一键加入）。</div>" +
         '<div class="row mt12"><button class="primary big" data-act="mock-start">开始答题</button></div></div>'
@@ -2419,14 +2424,14 @@
       S.bank.chapters.map(function (chapter) { return option(chapter.chapterCode, chapter.chapterName, filter.chapter); }).join("") + "</select></label>" +
       '<input type="text" data-act="review-keyword" placeholder="搜索题干或题号" value="' + esc(filter.keyword) + '" style="min-width:200px">' +
       '<span class="badge blue">命中 ' + list.length + " 题</span>" +
-      '<span class="muted">修正本地立即生效，并随导出共享（按 updatedAt 后写覆盖）；导入他人文件后自动应用。</span></div></div>' +
+      '<span class="muted">修正立即生效并保存到服务端，随导出共享（按 updatedAt 后写覆盖）；导入他人文件后自动应用。</span></div></div>' +
       (rows.length ? rows.join("") : '<div class="card"><div class="muted">没有符合条件的题目。</div></div>') +
       (list.length > shown.length ? '<div class="card"><button data-act="review-more">显示更多（剩余 ' + (list.length - shown.length) + " 题）</button></div>" : "") +
       '<div class="card" style="border-color:#fca5a5"><h2>危险操作区</h2>' +
-      '<div class="muted">以下操作不可撤销，建议先「导出全部备份」；覆盖层与作答记录都在本机浏览器里，清空后无法恢复。</div>' +
+      '<div class="muted">以下操作不可撤销，建议先「导出全部备份」；覆盖层与作答记录都存在服务端，清空后无法恢复。</div>' +
       '<div class="row mt8"><button data-act="export-backup">导出全部备份</button>' +
-      '<button data-act="data-raw">导出原始存储内容（排查用）</button>' +
-      '<button class="danger" data-act="clear-data">清空本地数据（二次确认）</button></div></div>'
+      '<button data-act="data-raw">导出当前题库的原始数据（排查用）</button>' +
+      '<button class="danger" data-act="clear-data">清空本账号数据（二次确认）</button></div></div>'
     );
   }
 
@@ -2518,6 +2523,7 @@
       $("whoami").textContent = "";
     }
     renderBankSwitcher();
+    renderBrandVer();
     var adminNav = $("navAdmin");
     if (adminNav) adminNav.className = S.user && S.user.role === "admin" ? "" : "hidden";
     var navButtons = document.querySelectorAll("#nav button");
@@ -2543,6 +2549,14 @@
     }).join("");
     host.innerHTML = '<label class="bankswitch"><span class="muted">题库</span>' +
       '<select data-act="bank-switch">' + options + "</select></label>";
+  }
+
+  /** 品牌区的版本号：题库版本随当前题库变化，不能写死构建时的内置题库版本 */
+  function renderBrandVer() {
+    var host = $("brandVer");
+    if (!host) return;
+    var ver = S.bank ? bankVersion() : "";
+    host.textContent = "v" + CQP.VERSION + (ver ? " · 题库 " + ver : "");
   }
 
   // ------------------------------------------------------------ 管理后台
@@ -3070,6 +3084,14 @@
       if (!target) return;
       go(target.getAttribute("data-nav"));
     });
+    var bankSwitch = $("bankSwitch");
+    if (bankSwitch) {
+      bankSwitch.addEventListener("change", function (event) {
+        var select = event.target.closest('select[data-act="bank-switch"]');
+        if (!select) return;
+        switchBank(select.value).then(function () { render(); });
+      });
+    }
     var whoami = $("whoami");
     if (whoami) {
       whoami.addEventListener("click", function (event) {

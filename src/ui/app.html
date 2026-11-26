@@ -10,7 +10,7 @@
 <div id="banner" class="banner error hidden"></div>
 
 <header class="topbar">
-  <div class="brand">密码赛刷题平台<span class="ver">v{{APP_VERSION}} · 题库 {{BANK_VERSION}}</span></div>
+  <div class="brand">密码赛刷题平台<span class="ver" id="brandVer">v{{APP_VERSION}}</span></div>
   <nav class="nav" id="nav">
     <button data-nav="home">首页</button>
     <button data-nav="setup">分类练习</button>
@@ -22,6 +22,7 @@
     <button data-nav="review">校对纠错</button>
     <button data-nav="admin" id="navAdmin" class="hidden">管理</button>
   </nav>
+  <div class="bankhost" id="bankSwitch"></div>
   <div class="whoami" id="whoami"></div>
 </header>
 

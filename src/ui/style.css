@@ -219,6 +219,15 @@ td.confcell button.small { margin: 0 2px 0 0; vertical-align: middle; }
 .bankswitch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .bankswitch select { max-width: 260px; }
 
+/* 顶部题库切换器（>1 个题库时才渲染内容） */
+.bankhost { display: flex; align-items: center; }
+.bankhost .muted { color: #9ca3af; }
+.bankswitch select {
+  background: #1f2937; color: #e5e7eb; border: 1px solid #374151;
+  border-radius: 6px; padding: 4px 8px; font-size: 13px;
+}
+.bankswitch select:hover { background: #374151; }
+
 /* 登录 / 注册 */
 .authgate { display: flex; justify-content: center; padding: 56px 16px; }
 .authcard {

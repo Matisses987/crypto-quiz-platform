@@ -114,8 +114,10 @@ tools/
   validate_bank.mjs     题库冻结契约校验
   parse_bank.py         从 PDF 解析题库（需要 Python + pypdfium2）
 
-tests/                  146+ 项回归测试（node --test）
+tests/                  171 项回归测试（node --test）
 ```
+
+> 面向使用者的完整说明见 [`docs/使用说明.md`](docs/使用说明.md)（服务器版，含普通用户与部署者两条路径）。
 
 ---
 

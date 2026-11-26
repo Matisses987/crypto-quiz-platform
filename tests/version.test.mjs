@@ -243,9 +243,18 @@ test("t37 shipped artifact shows the app version in the brand badge and on the h
   assert.equal(artifact.report.target, "server");
   assert.equal(html.indexOf("{{APP_VERSION}}"), -1, "no unsubstituted APP_VERSION placeholder");
   assert.equal(html.indexOf("{{BANK_VERSION}}"), -1, "no unsubstituted BANK_VERSION placeholder");
-  assert.ok(
-    html.indexOf("v" + ACQP.VERSION + " · 题库 " + BANK_VERSION) >= 0,
-    "brand badge must read v<VERSION> · 题库 <bankVersion>"
+
+  // 品牌角标：应用版本在构建时写死，题库版本改由 renderBrandVer() 按当前题库填
+  // （多题库切换后写死的内置版本会误导，见题库切换器那次修复）。
+  const brandAt = html.indexOf('class="brand"');
+  assert.ok(brandAt >= 0, "artifact contains the brand badge");
+  const brand = html.slice(brandAt, brandAt + 240);
+  assert.ok(brand.indexOf("v" + ACQP.VERSION) >= 0, "brand badge in the shipped artifact carries the app version");
+  assert.ok(brand.indexOf('id="brandVer"') >= 0, "brand badge exposes #brandVer for the runtime bank version");
+  assert.equal(
+    brand.indexOf("题库 " + BANK_VERSION) >= 0,
+    false,
+    "brand badge must not bake the builtin bank version into the artifact"
   );
 
   // 首页「数据与题库」卡片（题库版本来自服务端下发的题库 JSON）
@@ -259,14 +268,16 @@ test("t37 shipped artifact shows the app version in the brand badge and on the h
   assert.ok(home.indexOf(BANK_VERSION) >= 0, "home page still shows the bank version");
   assert.equal(CQPUI.state.bankRaw.bankVersion, BANK_VERSION);
 
-  // 统计页渲染正常，且共用同一品牌角标（模板在 #main 之外）
+  // 统计页渲染正常，且品牌角标此时已填上当前题库的版本
   CQPUI.go("stats");
   assert.ok(app.main().length > 400, "stats page renders");
-  const brandAt = html.indexOf('class="brand"');
-  assert.ok(brandAt >= 0, "artifact contains the brand badge");
-  const brand = html.slice(brandAt, brandAt + 240);
-  assert.ok(brand.indexOf("v" + ACQP.VERSION) >= 0, "brand badge in the shipped artifact carries the app version");
-  assert.ok(brand.indexOf(BANK_VERSION) >= 0, "brand badge carries the bank version");
+  const brandVer = app.dom.getElementById("brandVer");
+  assert.ok(brandVer, "runtime brand badge node exists");
+  assert.equal(
+    brandVer.textContent,
+    "v" + ACQP.VERSION + " · 题库 " + BANK_VERSION,
+    "brand badge reads v<VERSION> · 题库 <bankVersion> after render"
+  );
 
   // 产物自检：服务端目标 11 项全过（含 no inlined bank / calls server API）
   const check = verifyArtifact(html, { target: "server", bank });
