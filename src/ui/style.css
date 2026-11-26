@@ -84,6 +84,10 @@ th { background: #f8fafc; font-weight: 600; position: sticky; top: 0; }
 tbody tr:hover { background: #f8fafc; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { max-height: 460px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+/* 信心列：两个按钮必须同一行，不能被挤成竖排（竖排会溢出到下一行） */
+td.confcell { min-width: 132px; white-space: nowrap; }
+td.confcell .badge { margin-right: 2px; }
+td.confcell button.small { margin: 0 2px 0 0; vertical-align: middle; }
 
 .badge {
   display: inline-block; padding: 1px 7px; border-radius: 999px;
@@ -180,12 +184,25 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .split { grid-template-columns: 1fr; }
   .qpanel { grid-template-columns: repeat(10, 1fr); }
   main { padding: 12px; }
-  .nav { gap: 4px; }
-  .nav button { padding: 4px 7px; font-size: 12px; }
+  /* 顶栏在窄屏必须两行：第一行品牌 + 账号，第二行导航横向滚动。
+     之前只写了 .nav { gap:4px }，九个按钮仍挤在同一 flex 行里，
+     手机上一行只放得下一个，整条顶栏被撑到 600px 高。 */
+  .topbar { flex-wrap: wrap; gap: 8px 12px; padding: 8px 12px; }
+  .brand { font-size: 15px; }
+  .nav {
+    order: 3; flex: 1 0 100%; flex-wrap: nowrap;
+    overflow-x: auto; gap: 6px; padding-bottom: 2px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav button { flex: 0 0 auto; padding: 4px 9px; font-size: 12px; white-space: nowrap; }
+  .whoami { margin-left: auto; }
+  .whoamibtn { padding: 3px 10px; font-size: 12px; }
+  .whoamimeta { display: none; }
 }
 @media (max-width: 640px) {
-  .topbar { flex-wrap: wrap; }
-  .brand { font-size: 15px; }
+  .brand .ver { display: none; }
+  .brand { font-size: 16px; }
 }
 
 /* ---------------------------------------------------------------- 服务器版新增 */

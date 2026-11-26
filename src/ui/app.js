@@ -2264,7 +2264,7 @@
         return colorBadge(cellColor) +
           (inBook ? ' <span class="badge flag">已在错题本' + (entry && entry.confidentStreak ? "（连续有把握 " + entry.confidentStreak + "）" : "") + "</span>" : "") +
           '<div class="nowrap mt8"><button class="small' + (response.confidence === "confident" ? " primary" : "") + '" data-act="mock-conf" data-qid="' +
-          esc(qid) + '" data-conf="confident">有把握</button>' +
+          esc(qid) + '" data-conf="confident">有把握</button> ' +
           '<button class="small' + (response.confidence === "guessed" ? " primary" : "") + '" data-act="mock-conf" data-qid="' +
           esc(qid) + '" data-conf="guessed">带猜测</button></div>';
       };
@@ -2278,7 +2278,7 @@
           '<td class="mono">' + esc(response.myAnswer.join("") || "（未答）") + '</td>' +
           '<td class="mono">' + esc(question ? CQP.answerText(question) : "") + "</td>" +
           "<td>" + (response.correct ? '<span class="badge green">正确</span>' : '<span class="badge red">错误</span>') + "</td>" +
-          "<td>" + confidenceCellHtml(qid, response) + "</td></tr>";
+          '<td class="confcell">' + confidenceCellHtml(qid, response) + "</td></tr>";
       }).join("");
 
       // 抽题分布：由 paper.distribution 的实际值渲染（byType / byChapter）
