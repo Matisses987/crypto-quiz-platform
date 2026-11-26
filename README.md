@@ -30,7 +30,7 @@ node server/index.js
 2. 若 `public/index.html` 不存在（它是构建产物、被 `.gitignore` 忽略），自动跑一次
    `tools/build.mjs --target server`；构建失败会在日志里提示手动 `npm run build`；
 3. 从 `src/data/bank.json` 导入内置题库（`slug=builtin`，1051 题）；
-4. 从 `data/seed/*.json` 导入附带的两个小题库（`crypto` 44 题、`law` 32 题）。
+4. 从 `seeds/*.json` 导入附带的两个小题库（`crypto` 44 题、`law` 32 题）。
 
 Windows 上有更省事的启动脚本：
 
@@ -98,8 +98,11 @@ src/                    前端源码（构建时内联成一个 HTML）
 
 data/                   运行时数据（已 gitignore）
   app.db                SQLite 数据库
-  seed/*.json           启动时自动导入的题库
   backup/               数据库备份
+
+seeds/                  随仓库附带的两份小题库（44 + 32 题），启动时幂等导入
+  crypto.json           密码学
+  law.json              法规
 
 deploy/
   start.ps1             Windows 启动/停止/状态脚本
@@ -278,7 +281,7 @@ node --test tests/
 ## 题库来源与免责声明
 
 - 题面与答案来自**竞赛组委会公开发布的题库文件**（在原发布渠道公开），**版权归竞赛组委会所有**；
-- `data/seed/crypto.json` 与 `data/seed/law.json` 是另行整理的两个小题库（44 + 32 题），
+- `seeds/crypto.json` 与 `seeds/law.json` 是另行整理的两个小题库（44 + 32 题），
   同样仅供备赛练习；
 - 本仓库只提供**工具**与**已解析的数据文件**（`src/data/bank.json`），不转载组委会发布的原始 PDF；
 - 本项目非官方发布物；若版权方认为仓库内容不妥，请提 Issue，会第一时间删除相关内容。

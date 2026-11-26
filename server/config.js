@@ -81,7 +81,9 @@ export const config = {
   dbPath: resolvePath(str("CQP_DB", "data/app.db")),
   backupDir: resolvePath(str("CQP_BACKUP_DIR", "data/backup")),
   backupCron: str("CQP_BACKUP_CRON", "03:10"),
-  seedDir: resolvePath(str("CQP_SEED_DIR", "data/seed")),
+  // 种子题库随仓库走（seeds/ 已入库），不放 data/ —— 那个目录被 .gitignore 忽略，
+  // 克隆下来会只剩内置 1051 题，用户看不到附带的两份小题库。
+  seedDir: resolvePath(str("CQP_SEED_DIR", "seeds")),
   uploadDir: resolvePath(str("CQP_UPLOAD_DIR", "data/banks")),
 
   allowRegister: bool("CQP_ALLOW_REGISTER", true),
