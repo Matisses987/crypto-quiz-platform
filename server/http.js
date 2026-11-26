@@ -1,6 +1,7 @@
 // HTTP 工具层：路由分发、JSON 读写、静态文件、cookie、客户端 IP
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { config } from "./config.js";
 
 export class HttpError extends Error {
@@ -42,16 +43,39 @@ const SECURITY_HEADERS = {
   "Cross-Origin-Opener-Policy": "same-origin",
 };
 
+/** 客户端是否接受 gzip（只做 gzip：手机浏览器与 curl 都稳，不折腾 br/zstd） */
+function acceptsGzip(req) {
+  const ae = String((req && req.headers && req.headers["accept-encoding"]) || "");
+  return /\bgzip\b/i.test(ae);
+}
+
+/** 大响应压缩：小于 1KB 不值得压（压缩头开销抵消收益） */
+const COMPRESS_MIN = 1024;
+
+function maybeGzip(req, buf) {
+  if (buf.length < COMPRESS_MIN || !acceptsGzip(req)) return null;
+  return zlib.gzipSync(buf, { level: 6 });
+}
+
+/**
+ * 用 res.req 反查请求，避免把 req 一路透传进 30 多个调用点。
+ * 手工构造的 res 没有 req 时退化为不压缩，行为与旧版一致。
+ */
 export function sendJson(res, status, payload, extraHeaders) {
-  const body = JSON.stringify(payload);
-  res.writeHead(status, {
+  const req = res.req;
+  const body = Buffer.from(JSON.stringify(payload), "utf8");
+  const gz = maybeGzip(req, body);
+  const headers = {
     "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body),
+    "Content-Length": (gz || body).length,
     "Cache-Control": "no-store",
+    Vary: "Accept-Encoding",
     ...SECURITY_HEADERS,
     ...extraHeaders,
-  });
-  res.end(body);
+  };
+  if (gz) headers["Content-Encoding"] = "gzip";
+  res.writeHead(status, headers);
+  res.end(req && req.method === "HEAD" ? undefined : gz || body);
 }
 
 export function sendText(res, status, text, headers) {
@@ -213,17 +237,21 @@ export function serveStatic(req, res, urlPath) {
     res.end();
     return true;
   }
-  const body = fs.readFileSync(file);
-  res.writeHead(200, {
+  const raw = fs.readFileSync(file);
+  const gz = maybeGzip(req, raw);
+  const headers = {
     "Content-Type": MIME[ext] || "application/octet-stream",
-    "Content-Length": body.length,
+    "Content-Length": (gz || raw).length,
     ETag: etag,
     "Cache-Control": name === "index.html" ? "no-cache" : "public, max-age=300",
+    Vary: "Accept-Encoding",
     ...SECURITY_HEADERS,
     "Content-Security-Policy":
       "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'",
-  });
-  res.end(req.method === "HEAD" ? undefined : body);
+  };
+  if (gz) headers["Content-Encoding"] = "gzip";
+  res.writeHead(200, headers);
+  res.end(req.method === "HEAD" ? undefined : gz || raw);
   return true;
 }
 
