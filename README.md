@@ -232,6 +232,28 @@ node -e 'import("./server/db.js").then(m=>{m.openDb();m.backupTo("data/backup")}
 
 ---
 
+## 运维命令行（`admin-cli`）
+
+网页进不去、或者要批量开账号时，在服务器上直接操作账号（读写同一个 SQLite 文件，
+服务不用停）：
+
+```bash
+node server/admin-cli.js list                        # 列出全部账号
+node server/admin-cli.js create <用户名> <密码> [角色]  # 角色 admin / user，空库第一个自动 admin
+node server/admin-cli.js passwd <用户名> <新密码>      # 重置密码（同时踢掉该账号全部会话）
+node server/admin-cli.js promote <用户名>             # 升为管理员
+node server/admin-cli.js demote <用户名>              # 降为普通用户
+node server/admin-cli.js disable <用户名>             # 停用（同时踢掉全部会话）
+node server/admin-cli.js enable <用户名>              # 恢复
+```
+
+- 数据库路径同样看 `CQP_DB`（或 `.env`），默认 `data/app.db`；**换库时要带上环境变量**，
+  否则会连到默认库、报「找不到账号」。
+- 停用 / 降级最后一名可用管理员会被拒绝（避免把自己锁在门外）。
+- 所有操作都写审计日志，`user_id` 记空、`ip` 记 `cli`，管理页「审计」表里能看到。
+
+---
+
 ## 安全说明
 
 - 密码：scrypt（N=16384, r=8, p=1, keylen=64），`timingSafeEqual` 比对

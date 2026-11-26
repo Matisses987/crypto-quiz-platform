@@ -12,7 +12,7 @@
  *
  * 改密码/停用会立刻踢掉该账号的全部会话。所有操作都会写审计日志（操作人记 0 = 命令行）。
  */
-import { openDb, all, one, run } from "./db.js";
+import { openDb, all, one, run, nowIso } from "./db.js";
 import { hashPassword, validateCredentials, normalizeDisplayName } from "./auth.js";
 import { writeAudit } from "./admin.js";
 
@@ -95,7 +95,12 @@ function main(argv) {
   if (cmd === "create") {
     const [username, password, role] = argv.slice(1);
     const cred = validateCredentials(username, password);
-    const finalRole = role === "admin" ? "admin" : "user";
+    if (role && role !== "admin" && role !== "user") {
+      die("角色只能是 admin 或 user");
+    }
+    // 空库时第一个账号必须是管理员，否则没人能进管理页（与网页注册的口径一致）
+    const isFirst = one("SELECT count(*) AS c FROM users").c === 0;
+    const finalRole = role || (isFirst ? "admin" : "user");
     if (one("SELECT id FROM users WHERE username = ? COLLATE NOCASE", cred.username)) {
       die("用户名已存在：" + cred.username);
     }
@@ -105,10 +110,11 @@ function main(argv) {
       hashPassword(cred.password),
       normalizeDisplayName("", cred.username),
       finalRole,
-      new Date().toISOString()
+      nowIso()
     );
     writeAudit(CLI_ACTOR, "user.create", `${cred.username} role=${finalRole}`, "cli");
     console.log(`已创建 ${cred.username}（id=${info.lastId}，角色 ${finalRole}）`);
+    if (isFirst) console.log("提示：这是空库里的第一个账号，已自动设为管理员。");
     return;
   }
 
