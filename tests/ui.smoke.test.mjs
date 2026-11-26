@@ -1,113 +1,121 @@
-// UI smoke test: drives the shipped single-file app inside a minimal DOM shim,
-// covering the three-colour rule, wrongbook entry, stats, review overlay and the mock exam.
+// UI smoke test（服务端版）：在最小 DOM shim 里跑 shipped 的 server 产物，
+// 覆盖三色规则、错题本进出、统计、校对覆盖层与模拟赛。
+//
+// 与离线单文件时代的三处关键差异：
+//   1. 题库由 /api/banks/:slug 下发，**没有 answer**；判分走 /api/practice/grade。
+//   2. 持久化走 /api/store（250ms 防抖），断言读 app.serverStore() 而不是 localStorage。
+//   3. 模拟考在服务端：出卷 / 交卷都是真 HTTP 调用，交卷后 store.sessions 不再被写。
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import vm from "node:vm";
-import { fileURLToPath } from "node:url";
-import { build } from "../tools/build.mjs";
-import { createDom } from "./helpers/domshim.mjs";
+import { bankWithAnswers, createServerApp, fakeActionElement, fullWidth } from "./helpers/serverapp.mjs";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
-const fixturePath = path.join(here, "fixtures", "bank.sample.json");
-const realPath = path.join(root, "src", "data", "bank.json");
-// t46 O-01：临时产物写系统临时目录，绝不落在交付目录 dist/
-const artifactPath = path.join(os.tmpdir(), "__cqp_ui_smoke_test.html");
+const ANSWERS = bankWithAnswers();
 
-function fullWidth(text) {
-  return String(text).replace(/[!-~]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0xfee0));
+/** 带标准答案的题目（只在测试里用：构造记录、算「正确答案」时需要） */
+function answerFor(qid) {
+  const question = ANSWERS.questions.find((item) => item.id === qid);
+  assert.ok(question, "题库里应当有 " + qid);
+  return question;
 }
 
-function extractScript(html, id) {
-  const start = html.indexOf('<script id="' + id + '"');
-  assert.ok(start > 0, "missing script " + id);
-  const openEnd = html.indexOf(">", start);
-  const close = html.indexOf("</script>", openEnd);
-  return html.slice(openEnd + 1, close);
+/** 取一道带答案的题（按题型 + 过滤条件） */
+function pickAnswered(sectionType, predicate) {
+  const question = ANSWERS.questions.find(
+    (item) => item.sectionType === sectionType && (!predicate || predicate(item))
+  );
+  assert.ok(question, "题库里应当有 " + sectionType + " 题");
+  return question;
 }
 
-function bootApp() {
-  const bankPath = fs.existsSync(realPath) ? realPath : fixturePath;
-  const result = build({ bankPath, outPath: artifactPath, reportPath: null });
-  assert.equal(result.ok, true);
-  const html = fs.readFileSync(artifactPath, "utf8");
-  const bankJson = extractScript(html, "bank-data");
-  const coreJs = extractScript(html, "cqp-core");
-  const appJs = extractScript(html, "cqp-app");
-
-  const dom = createDom();
-  dom.getElementById("bank-data").textContent = bankJson;
-  const context = vm.createContext(dom.context);
-  vm.runInContext(coreJs, context, { filename: "core.js" });
-  dom.window.CQP = context.CQP;
-  vm.runInContext(appJs, context, { filename: "app.js" });
-  return { dom, context, CQP: context.CQP, CQPUI: dom.window.CQPUI, bankJson };
+/** 取错误选项的 key（用于「答错」路径） */
+function wrongKeyOf(question) {
+  if (question.options.length === 0) return "错";
+  return question.options.map((option) => option.key).find((key) => question.answer.indexOf(key) < 0);
 }
 
-function fakeActionElement(attributes) {
-  return {
-    getAttribute(name) {
-      return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null;
-    },
-  };
-}
-
-test("UI smoke: pages render, practice flow follows the three-colour rule", () => {
-  const { dom, CQP, CQPUI } = bootApp();
+test("UI smoke: pages render, practice flow follows the three-colour rule", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
   assert.ok(CQPUI, "CQPUI must be exposed by the shipped app");
 
-  // 首次进入要求填写昵称
-  assert.ok(dom.getElementById("modalRoot").innerHTML.indexOf("请填写昵称") > 0);
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
-  CQPUI.render();
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("今日学习") > 0);
+  // 服务端版：昵称来自账号，不再弹「请填写昵称」
+  assert.equal(
+    dom.getElementById("modalRoot").innerHTML.indexOf("请填写昵称"),
+    -1,
+    "服务端版不该再要求填写昵称"
+  );
+  assert.equal(CQPUI.state.store.meta.nickname, "小明", "昵称由账号 displayName 带下来");
+  assert.equal(CQPUI.state.page, "home");
+  assert.ok(app.main().indexOf("今日学习") > 0);
+  // 启动链就是四步 API
+  const boot = app.calls.map((call) => call.method + " " + call.url);
+  assert.deepEqual(boot.slice(0, 4), [
+    "GET /api/me",
+    "GET /api/banks",
+    "GET /api/banks/builtin",
+    "GET /api/store?bank=builtin",
+  ]);
+  // 下发题库已脱答案
+  assert.equal(CQP.__test.bank.questions[0].answer, undefined, "下发的题库不能带答案");
 
-  // 所有页面都能渲染
+  // 所有页面都能渲染（团队页要先等一次 /api/team/summary 回来）
   for (const page of ["setup", "wrongbook", "stats", "team", "io", "review", "mock", "home"]) {
     CQPUI.go(page);
-    assert.ok(dom.getElementById("main").innerHTML.length > 400, "page " + page + " renders something");
+    await app.settle();
+    assert.ok(app.main().length > 400, "page " + page + " renders something");
   }
+
   CQPUI.go("setup");
-  const setupHtml = dom.getElementById("main").innerHTML;
+  const setupHtml = app.main();
   assert.ok(setupHtml.indexOf("分类练习设置") > 0);
   assert.ok(setupHtml.indexOf("知识点标签") > 0);
   assert.ok(setupHtml.indexOf("已练") > 0, "shows how much of each chapter has been practised");
 
-  const bank = CQP.__test.bank;
-  const single = bank.questions.find((q) => q.sectionType === "single" && q.options.length === 4);
-  const blank = bank.questions.find((q) => q.sectionType === "blank" && q.answer.length >= 1);
-  const judge = bank.questions.find((q) => q.sectionType === "judge");
-  const questions = [single, blank, judge];
+  const single = pickAnswered("single", (q) => q.options.length === 4);
+  const blank = pickAnswered("blank", (q) => q.answer.length >= 1);
+  const judge = pickAnswered("judge");
+  const questions = [single, blank, judge]
+    // 交给 UI 的是「服务端下发」的那份对象（没有答案），判分靠 /api/practice/grade
+    .map((q) => CQP.__test.bank.questions.find((item) => item.id === q.id));
   CQPUI.__test.startPractice("practice_chapter", questions, { title: "冒烟练习" });
-  assert.ok(dom.getElementById("main").innerHTML.indexOf(CQP.queryEscapedStem ? "" : "") === 0);
+  assert.equal(CQPUI.state.page, "practice");
 
   // 第 1 题：答对 + 带猜测 -> 黄，进错题本
   dom.setChecked([single.answer[0]]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   let item = CQPUI.__test.practiceItem(0);
-  assert.equal(item.submitted, true);
+  assert.equal(item.submitted, true, "判分在服务端，settle 之后才提交完成");
   assert.equal(item.correct, true);
   assert.equal(item.color, "green", "默认有把握 -> 绿");
+  assert.ok(app.callsMatching(/^POST \/api\/practice\/grade$/).length >= 1, "判分必须打到服务端");
+  const gradeCall = app.lastCall(/^POST \/api\/practice\/grade$/);
+  assert.equal(gradeCall.body.bankSlug, "builtin");
+  assert.equal(gradeCall.body.qid, single.id);
+  assert.deepEqual(gradeCall.body.myAnswer, [single.answer[0]]);
+  assert.ok(item.ts, "提交后拿到服务端时间戳");
+
   CQPUI.__test.action("conf", fakeActionElement({ "data-conf": "guessed" }));
   assert.equal(CQPUI.__test.practiceItem(0).color, "yellow");
+  assert.equal(CQPUI.__test.practiceItem(0).confidence, "guessed");
 
-  // O-2 回归：提交即落库 —— 未点「下一题」时就已在内存态与 localStorage 里
+  // O-2 回归：提交即落库 —— 未点「下一题」时内存态与服务端副本都已更新
   assert.equal(CQPUI.state.store.records.length, 1, "提交后立即写记录");
   assert.equal(CQPUI.state.store.records[0].confidence, "guessed");
   assert.equal(CQPUI.state.store.wrongbook[single.id].state, "active", "提交后错题本立即更新");
-  assert.equal(JSON.parse(dom.storageMap.get("cqp.v1.records")).length, 1, "提交后立即落盘");
-  assert.equal(Object.keys(JSON.parse(dom.storageMap.get("cqp.v1.wrongbook"))).length, 1);
+  await app.settle();
+  assert.equal(app.serverStore().records.length, 1, "提交后立即同步到服务端");
+  assert.equal(app.serverStore().wrongbook[single.id].state, "active");
+
   CQPUI.go("stats");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf(single.id) > 0, "统计页能看到刚提交的题");
+  assert.ok(app.main().indexOf(single.id) > 0, "统计页能看到刚提交的题");
   const earlyExport = CQP.exportPayload({ store: CQPUI.state.store, scope: "all", nickname: "小明" });
   assert.equal(earlyExport.counts.records, 1, "导出能看到刚提交的题");
   dom.fireWindow("pagehide");
+  await app.settle();
   assert.equal(CQPUI.state.store.records.length, 1, "pagehide 兜底 flush 不重复计数");
   CQPUI.__test.flushPractice();
+  await app.settle();
   assert.equal(CQPUI.state.store.records.length, 1, "兜底 flush 幂等");
   CQPUI.go("practice");
   assert.equal(CQPUI.__test.practiceItem(0).submitted, true, "导航往返后作答状态仍在");
@@ -118,25 +126,28 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
   assert.equal(CQPUI.state.store.records[0].confidence, "guessed");
   assert.equal(CQPUI.state.store.wrongbook[single.id].state, "active", "猜对进入错题本");
 
-  // 第 2 题：填空用全角输入 -> 仍然判对（队长决定），保持有把握 -> 绿，不进错题本
-  const blankHtml = dom.getElementById("main").innerHTML;
+  // 第 2 题：填空用全角输入 -> 仍然判对（服务端 foldWidth），保持有把握 -> 绿，不进错题本
+  const blankHtml = app.main();
   assert.equal(blankHtml.split('id="blankInput"').length - 1, 1, "填空输入框只渲染一次（原位替换，无重复控件）");
-  CQPUI.__test.action("prac-submit"); // 未作答时不应提交
-  assert.equal(CQPUI.__test.practiceItem(1).submitted, false);
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
+  assert.equal(CQPUI.__test.practiceItem(1).submitted, false, "未作答时不提交");
   const blankInput = dom.makeElement("input");
   blankInput.value = fullWidth(blank.answer[0]);
   dom.register("#blankInput", blankInput);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   item = CQPUI.__test.practiceItem(1);
   assert.equal(item.submitted, true, "blank answer submitted");
-  assert.equal(item.correct, true, "full-width answer is accepted");
+  assert.equal(item.correct, true, "服务端判分接受全角答案");
   assert.equal(item.color, "green");
   CQPUI.__test.action("prac-next");
   assert.equal(CQPUI.state.store.wrongbook[blank.id], undefined, "有把握答对不进错题本");
 
   // 第 3 题：答错 -> 红，进错题本
   dom.setChecked([judge.answer[0] === "对" ? "错" : "对"]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   item = CQPUI.__test.practiceItem(2);
   assert.equal(item.correct, false);
   assert.equal(item.color, "red");
@@ -146,27 +157,29 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
 
   // 结算页
   assert.equal(CQPUI.state.page, "result");
-  const resultHtml = dom.getElementById("main").innerHTML;
+  const resultHtml = app.main();
   assert.ok(resultHtml.indexOf("本轮结算") > 0);
   assert.ok(resultHtml.indexOf("正确率") > 0);
   assert.ok(resultHtml.indexOf("绿·有把握对") > 0);
   assert.ok(resultHtml.indexOf("黄·猜对") > 0);
   assert.ok(resultHtml.indexOf("红·错") > 0);
 
-  // 落盘：localStorage 里能读到记录与错题本
-  assert.ok(dom.storageMap.has("cqp.v1.records"));
-  assert.equal(JSON.parse(dom.storageMap.get("cqp.v1.records")).length, 3);
-  assert.equal(Object.keys(JSON.parse(dom.storageMap.get("cqp.v1.wrongbook"))).length, 2);
-  assert.equal(JSON.parse(dom.storageMap.get("cqp.v1.meta")).nickname, "小明");
+  // 服务端副本：记录与错题本都在
+  await app.settle();
+  const serverStore = app.serverStore();
+  assert.equal(serverStore.records.length, 3, "三条作答记录已同步到服务端");
+  assert.equal(Object.keys(serverStore.wrongbook).length, 2, "错题本两条（猜对 + 答错）");
+  assert.equal(serverStore.meta.nickname, "小明");
+  assert.ok(app.serverRev() >= 1, "rev 由服务端推进");
 
   // 错题本页面与重练入口
   CQPUI.go("wrongbook");
-  const wrongHtml = dom.getElementById("main").innerHTML;
+  const wrongHtml = app.main();
   assert.ok(wrongHtml.indexOf("错题本") > 0);
   assert.ok(wrongHtml.indexOf("错题重练") > 0);
-  assert.ok(dom.getElementById("whoami").textContent.indexOf("在册错题 2") >= 0);
+  assert.ok(app.nickname().indexOf("在册错题 2") >= 0, "whoami 里在册错题数跟随服务端副本");
 
-  // 自动移出：连续两次有把握答对
+  // 自动移出：连续两次有把握答对（纯核心逻辑，用带答案的题目对象）
   const entry = CQP.wrongbookApply(
     CQPUI.state.store.wrongbook,
     CQP.makeRecord({
@@ -176,7 +189,7 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
       elapsedMs: 10,
       mode: "practice_chapter",
       nickname: "小明",
-      bankVersion: bank.bankVersion,
+      bankVersion: ANSWERS.bankVersion,
       appVersion: CQP.VERSION,
       nowISO: "2026-10-06T10:00:00+08:00",
     }),
@@ -192,7 +205,7 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
       elapsedMs: 10,
       mode: "practice_chapter",
       nickname: "小明",
-      bankVersion: bank.bankVersion,
+      bankVersion: ANSWERS.bankVersion,
       appVersion: CQP.VERSION,
       nowISO: "2026-10-06T10:05:00+08:00",
     }),
@@ -203,20 +216,20 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
   CQPUI.state.store.wrongbook = cleared.book;
   CQPUI.state.wrongFilter.state = "removed";
   CQPUI.render();
-  const afterAuto = dom.getElementById("main").innerHTML;
-  assert.ok(afterAuto.indexOf("已自动移出") > 0);
+  assert.ok(app.main().indexOf("已自动移出") > 0);
   CQPUI.state.wrongFilter.state = "active";
 
-  // 学习统计：样本不足提示
+  // 学习统计
   CQPUI.go("stats");
-  const statsHtml = dom.getElementById("main").innerHTML;
+  const statsHtml = app.main();
   assert.ok(statsHtml.indexOf("掌握指数") > 0);
   assert.ok(statsHtml.indexOf("薄弱知识点 TOP") > 0);
   assert.ok(statsHtml.indexOf("每题明细") > 0);
 
   // 校对纠错：写入覆盖层并立即生效
   CQPUI.go("review");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("校对 / 纠错") > 0);
+  await app.settle();
+  assert.ok(app.main().indexOf("校对 / 纠错") > 0);
   const answerInput = dom.makeElement("input");
   answerInput.value = "ABD";
   const flagInput = dom.makeElement("input");
@@ -232,31 +245,31 @@ test("UI smoke: pages render, practice flow follows the three-colour rule", () =
   assert.equal(override.rev, 1);
   assert.equal(override.answer.join(","), "A,B,D", "parsed multi-answer letters");
   assert.equal(CQP.isFlagged(CQPUI.state.store.overrides, single.id), true);
+  const effective = CQP.effectiveBank().questions.filter((q) => q.id === single.id)[0];
+  assert.equal(effective.answer.join(","), "A,B,D", "the effective bank changed locally");
+  assert.equal(CQP.judge(effective, ["A", "B", "D"]).correct, true);
+  await app.settle();
   assert.equal(
-    CQP.effectiveBank().questions.filter((q) => q.id === single.id)[0].answer.join(","),
+    app.serverStore().overrides.items[single.id].answer.join(","),
     "A,B,D",
-    "the effective bank changed locally"
+    "覆盖层随 /api/store 落到服务端"
   );
-  assert.equal(CQP.judge(CQP.effectiveBank().questions.filter((q) => q.id === single.id)[0], ["A", "B", "D"]).correct, true);
-  assert.ok(dom.storageMap.has("cqp.v1.overrides"));
 
-  // 导出：单日导出含今天
+  // 导出页 + 团队页
   CQPUI.go("io");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("导出学习情况") > 0);
-  CQPUI.__test.action("export");
+  assert.ok(app.main().indexOf("导出学习情况") > 0);
+  CQPUI.__test.action("export", fakeActionElement({ "data-act": "export" }));
   CQPUI.go("team");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("成员对比") > 0);
-
-  fs.rmSync(artifactPath, { force: true });
+  await app.settle();
+  assert.ok(app.main().indexOf("成员对比") > 0);
 });
 
-test("UI smoke: importing a teammate file merges once and shows team stats", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
+test("UI smoke: importing a teammate file merges once and shows team stats", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
 
-  // 构造队友（小红）的导出文件：同一题答错，另一题答对
-  const bank = CQP.__test.bank;
+  // 构造队友（小红）的导出文件：一题答错，另一题答对
+  const bank = ANSWERS;
   const q1 = bank.questions[0];
   const q2 = bank.questions[1];
   const teammateStore = CQP.emptyStore();
@@ -303,101 +316,127 @@ test("UI smoke: importing a teammate file merges once and shows team stats", () 
   assert.equal(validation.ok, true);
   CQPUI.__test.setPending({ ok: true, errors: [], warnings: [], payload: validation.payload, fileName: "小红.json" });
   CQPUI.render();
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("文件校验通过") > 0);
+  assert.ok(app.main().indexOf("文件校验通过") > 0);
+
   CQPUI.__test.confirmImport();
-  assert.equal(CQPUI.state.store.records.length, 2);
+  await app.settle();
+  const importCalls = app.callsMatching(/^POST \/api\/store\/import$/);
+  assert.equal(importCalls.length, 1, "一次确认只打一次服务端合并");
+  assert.equal(importCalls[0].body.fileName, "小红.json");
+  assert.equal(importCalls[0].body.payload.counts.records, 2);
+
+  assert.equal(CQPUI.state.store.records.length, 2, "服务端合并结果被前端采用");
   assert.equal(CQPUI.state.store.imports.length, 1);
+  assert.equal(CQPUI.state.io.pending, null, "确认后清空待确认态");
+  assert.equal(CQPUI.state.io.report.importedRecords, 2);
   // F-01：内存态先同步再刷新派生数据 —— S.bank 立即反射导入的覆盖层答案
   const reflected = CQPUI.state.bank.questions.filter((q) => q.id === overrideQuestion.id)[0];
   assert.equal(reflected.answer.join(","), "A,B,D", "导入后 S.bank 立即反映新答案");
   assert.equal(CQP.isFlagged(CQPUI.state.store.overrides, overrideQuestion.id), true);
-  const reportHtml = dom.getElementById("main").innerHTML;
+  const reportHtml = app.main();
   assert.ok(reportHtml.indexOf("导入完成") > 0);
-  assert.ok(reportHtml.indexOf("小红") > 0);
-  assert.ok(dom.storageMap.has("cqp.v1.records"));
-  assert.equal(JSON.parse(dom.storageMap.get("cqp.v1.records")).length, 2);
+  assert.ok(reportHtml.indexOf("小红") > 0, "导入历史里记下文件名");
+  assert.equal(app.serverStore().records.length, 2, "服务端副本已合并");
+  assert.equal(app.serverStore().imports.length, 1);
 
   // 重复导入同一文件：不重复计数 + 冻结文案（F-08）
   CQPUI.__test.setPending({ ok: true, errors: [], warnings: [], payload: validation.payload, fileName: "小红.json" });
   CQPUI.__test.confirmImport();
+  await app.settle();
   assert.equal(CQPUI.state.store.records.length, 2);
-  assert.equal(CQPUI.state.store.imports.length, 2);
+  assert.equal(CQPUI.state.io.report.importedRecords, 0);
+  assert.equal(CQPUI.state.io.report.duplicates, 2);
   assert.ok(
-    dom.getElementById("main").innerHTML.indexOf("本次导入 0 条新增记录，2 条为重复记录（未重复计数）") > 0,
+    app.main().indexOf("本次导入 0 条新增记录，2 条为重复记录（未重复计数）") > 0,
     "0 新增时输出冻结文案"
   );
+  assert.equal(app.serverStore().records.length, 2, "重复导入不改动服务端副本");
 
-  // 团队对比：成员 2 人
+  // 团队对比：团队成员 = 服务端账号（不是导入文件里的昵称）
   CQPUI.go("team");
-  const teamHtml = dom.getElementById("main").innerHTML;
+  await app.settle();
+  const teamHtml = app.main();
   assert.ok(teamHtml.indexOf("成员对比") > 0);
-  assert.ok(teamHtml.indexOf("小红") > 0);
   assert.ok(teamHtml.indexOf("团队易错题") > 0);
+  assert.ok(teamHtml.indexOf("团队 = 本服务器上全部账号") > 0, "文案说明团队的口径是服务端账号");
+  assert.ok(app.callsMatching(/^GET \/api\/team\/summary/).length >= 1, "团队页必须拉服务端汇总");
+  assert.ok(teamHtml.indexOf("小明") > 0, "成员列表里是本服务器账号");
+  assert.ok(
+    teamHtml.indexOf('<div class="k">团队成员数</div><div class="v">1</div>') > 0,
+    "导入队友文件不会凭空多出一个成员：仍然只有 1 个账号"
+  );
 
-  // 非法文件被拒绝且本地数据不变
+  // 非法文件被拒绝且数据不变
   const bad = CQP.validateImport("not json");
   assert.equal(bad.ok, false);
   assert.equal(bad.errors[0].code, "E_PARSE");
   assert.equal(CQPUI.state.store.records.length, 2);
-
-  fs.rmSync(artifactPath, { force: true });
 });
 
-test("UI smoke: mock exam runs, grades and writes mock records", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
-  CQPUI.render();
+test("UI smoke: mock exam runs, grades on the server and writes mock records", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
 
   CQPUI.go("mock");
-  const setupHtml = dom.getElementById("main").innerHTML;
+  const setupHtml = app.main();
   assert.ok(setupHtml.indexOf("100 题") > 0);
   assert.ok(setupHtml.indexOf("60 分钟") > 0);
 
-  CQPUI.__test.action("mock-start");
+  CQPUI.__test.action("mock-start", fakeActionElement({ "data-act": "mock-start" }));
+  await app.settle();
   const mock = CQPUI.__test.mockState();
   assert.equal(mock.phase, "running");
+  const startCall = app.lastCall(/^POST \/api\/mock\/start$/);
+  assert.ok(startCall, "出卷必须打到服务端");
+  assert.equal(startCall.body.bankSlug, "builtin");
+  const examId = mock.paper.sessionId;
+  assert.ok(examId, "试卷 id 由服务端签发");
+  assert.equal(app.serverExam(examId).status, "running");
   const poolSize = CQP.candidates({ bank: CQP.__test.bank }).length;
   assert.equal(mock.paper.questionIds.length, Math.min(100, poolSize));
   assert.equal(new Set(mock.paper.questionIds).size, mock.paper.questionIds.length);
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("题号面板") > 0);
+  assert.ok(app.main().indexOf("题号面板") > 0);
 
   // 离开模拟赛需要二次确认（守卫弹窗）
   CQPUI.go("home");
   assert.ok(dom.getElementById("modalRoot").innerHTML.indexOf("正在模拟赛中") > 0);
   assert.equal(CQPUI.state.page, "mock");
 
-  // 作答两题后交卷
+  // 作答两题后交卷（答案取自带答案的题库副本）
   const firstId = mock.paper.questionIds[0];
-  const firstQuestion = CQP.questionById(CQP.getBank(), firstId);
-  dom.register("#mockBlank", null);
-  if (firstQuestion.options.length > 0) dom.setChecked(firstQuestion.answer.slice());
+  const firstAnswer = answerFor(firstId);
+  if (firstAnswer.options.length > 0) dom.setChecked(firstAnswer.answer.slice());
   else {
     const input = dom.makeElement("input");
-    input.value = fullWidth(firstQuestion.answer[0]);
+    input.value = fullWidth(firstAnswer.answer[0]);
     dom.register("#mockBlank", input);
   }
-  CQPUI.__test.action("mock-next");
+  CQPUI.__test.action("mock-next", fakeActionElement({ "data-act": "mock-next" }));
   assert.ok(mock.responses[firstId].elapsedMs >= 0, "切换题目时结算用时");
   assert.ok(mock.responses[firstId].myAnswer.length > 0, "全角填空在模拟赛中也被接受");
 
-  // 第二题按题型作答（填空用文本框，选择题用勾选）
   const secondId = mock.paper.questionIds[1];
-  const secondQuestion = CQP.questionById(CQP.getBank(), secondId);
-  if (secondQuestion.options.length > 0) {
-    dom.setChecked([secondQuestion.options[0].key]);
-  } else {
+  const secondAnswer = answerFor(secondId);
+  if (secondAnswer.options.length > 0) dom.setChecked([secondAnswer.options[0].key]);
+  else {
     const input = dom.makeElement("input");
     input.value = "模拟赛答案";
     dom.register("#mockBlank", input);
   }
-  CQPUI.__test.action("mock-next");
+  CQPUI.__test.action("mock-next", fakeActionElement({ "data-act": "mock-next" }));
   assert.ok(mock.responses[secondId].myAnswer.length > 0, "第二题已作答");
 
-  CQPUI.__test.submitMock(false);
+  await CQPUI.__test.submitMock(false);
+  await app.settle();
   assert.equal(mock.phase, "result");
-  assert.equal(CQPUI.state.store.sessions.length, 1);
-  const session = CQPUI.state.store.sessions[0];
+  const submitCall = app.lastCall(/^POST \/api\/mock\/[^/]+\/submit$/);
+  assert.ok(submitCall, "交卷必须打到服务端");
+  assert.equal(submitCall.body.autoSubmitted, false);
+  assert.equal(submitCall.body.nickname, "小明");
+  assert.equal(app.serverExam(examId).status, "submitted", "服务端场次已交卷");
+
+  const session = mock.session;
+  assert.ok(session, "成绩单由服务端返回");
   assert.equal(session.nickname, "小明");
   assert.equal(session.result.maxScore, 100);
   assert.equal(session.result.score, session.result.correctCount);
@@ -405,8 +444,10 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
   assert.equal(session.result.rankKey.length, 6);
   assert.equal(session.result.rankKey[0], session.result.score);
   assert.equal(session.result.rankKey[1] <= 0, true);
+  // 服务端版：成绩单不再塞进 store.sessions
+  assert.equal(CQPUI.state.store.sessions.length, 0, "模拟赛成绩单不再写进本地 store.sessions");
 
-  const resultHtml = dom.getElementById("main").innerHTML;
+  const resultHtml = app.main();
   assert.ok(resultHtml.indexOf("分项成绩（填空 → 多选 → 单选 → 判断）") > 0);
   assert.ok(resultHtml.indexOf("rankKey") > 0);
   assert.ok(resultHtml.indexOf("全部 100 题（逐题改信心）") > 0, "成绩页给出全部题目的逐题信心入口");
@@ -418,6 +459,15 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
   assert.ok(resultHtml.indexOf(">" + distByType.single + "<") > 0, "分布含单选实际值");
   assert.ok(resultHtml.indexOf(">" + distByChapter.C01 + "<") > 0, "分布含 C01 实际值");
 
+  // 交卷后答案由服务端下发到答案缓存（题目对象被回填）
+  const refilled = CQP.questionById(CQP.getBank(), firstId);
+  assert.equal(
+    JSON.stringify(refilled.answer),
+    JSON.stringify(firstAnswer.answer),
+    "交卷后服务端把标准答案回填到题目对象"
+  );
+  assert.ok(refilled.explanation !== undefined, "解析也随交卷一起回填");
+
   // 模拟赛记录写入统计（mode=mock，不自动进错题本）
   const mockRecords = CQPUI.state.store.records.filter((record) => record.mode === "mock");
   assert.ok(mockRecords.length >= 1);
@@ -425,7 +475,7 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
   assert.equal(Object.keys(CQPUI.state.store.wrongbook).length, 0, "模拟赛不自动写错题本");
 
   // 成绩页提供「把本次错题加入错题本」
-  CQPUI.__test.action("mock-wrong-to-book");
+  CQPUI.__test.action("mock-wrong-to-book", fakeActionElement({ "data-act": "mock-wrong-to-book" }));
   const wrongbookKeys = Object.keys(CQPUI.state.store.wrongbook);
   const wrongCount = session.questionIds.filter((qid) => !session.responses[qid].correct).length;
   assert.equal(wrongbookKeys.length > 0 || wrongCount === 0, true);
@@ -447,9 +497,10 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
     CQPUI.__test.setMockConfidence(targetQid, "confident");
     assert.equal(session.responses[targetQid].confidence, "confident");
     assert.equal(typeof CQPUI.state.store.wrongbook[targetQid].confidentStreak, "number", "已在错题本的题更新连续计数");
-    assert.ok(JSON.parse(dom.storageMap.get("cqp.v1.sessions")).length === 1, "信心修改随会话落盘");
     // 不在错题本的题改信心不会把题塞进错题本
-    const outsideQid = session.questionIds.filter((qid) => !CQPUI.state.store.wrongbook[qid] && !session.responses[qid].correct)[0];
+    const outsideQid = session.questionIds.filter(
+      (qid) => !CQPUI.state.store.wrongbook[qid] && !session.responses[qid].correct
+    )[0];
     if (outsideQid) {
       CQPUI.__test.setMockConfidence(outsideQid, "guessed");
       assert.equal(CQPUI.state.store.wrongbook[outsideQid], undefined, "模拟赛改信心不自动写错题本");
@@ -478,7 +529,10 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
   assert.ok(guessedEntry, "不在册的猜对题按 8.3 入册");
   assert.equal(guessedEntry.state, "active");
   assert.equal(guessedEntry.lastWrongAt, null, "仅因猜对入册：lastWrongAt 为 null（黄）");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf('data-qid="' + correctQid + '" data-conf="guessed"') > 0, "改信心后页面重渲染");
+  assert.ok(
+    app.main().indexOf('data-qid="' + correctQid + '" data-conf="guessed"') > 0,
+    "改信心后页面重渲染"
+  );
 
   // 再改回「有把握」：出册 + 按 1.0 计权（回到改信心之前的错题本状态）
   CQPUI.__test.setMockConfidence(correctQid, "confident");
@@ -497,27 +551,30 @@ test("UI smoke: mock exam runs, grades and writes mock records", () => {
   assert.equal(CQPUI.state.store.wrongbook[correctQid].state, "active");
   CQPUI.__test.setMockConfidence(correctQid, "confident");
   assert.equal(CQPUI.state.store.wrongbook[correctQid], undefined);
+  await app.settle();
+  assert.equal(
+    app.serverStore().records.filter((record) => record.mode === "mock").length,
+    mockRecords.length,
+    "信心回改不新增模拟赛记录（服务端副本一致）"
+  );
 
   // 再来一次回到确认页
-  CQPUI.__test.action("mock-again");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("模拟选拔赛") > 0);
-
-  fs.rmSync(artifactPath, { force: true });
+  CQPUI.__test.action("mock-again", fakeActionElement({ "data-act": "mock-again" }));
+  assert.ok(app.main().indexOf("模拟选拔赛") > 0);
 });
 
-test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
-  CQPUI.render();
+test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
 
   // F-11：清空数据入口不在首页，而在校对页的危险操作区
   CQPUI.go("home");
-  const homeHtml = dom.getElementById("main").innerHTML;
+  const homeHtml = app.main();
   assert.equal(homeHtml.indexOf('data-act="clear-data"'), -1, "首页不再直接暴露清空数据");
   assert.ok(homeHtml.indexOf("数据维护与危险操作") > 0);
   CQPUI.go("review");
-  const reviewHtml = dom.getElementById("main").innerHTML;
+  await app.settle();
+  const reviewHtml = app.main();
   assert.ok(reviewHtml.indexOf("危险操作区") > 0);
   assert.ok(reviewHtml.indexOf('data-act="clear-data"') > 0);
 
@@ -527,7 +584,7 @@ test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", 
   CQPUI.state.io.from = "2026-10-06";
   CQPUI.state.io.to = "2026-10-05";
   CQPUI.render();
-  const ioHtml = dom.getElementById("main").innerHTML;
+  const ioHtml = app.main();
   assert.ok(ioHtml.indexOf("起始日期不能晚于结束日期") > 0, "导出页显示冻结文案");
   assert.equal(ioHtml.indexOf("must not be later than"), -1, "不暴露内部异常消息");
   assert.ok(ioHtml.indexOf('data-act="export" disabled') > 0, "起始晚于结束时禁止导出");
@@ -536,7 +593,7 @@ test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", 
   CQPUI.state.statsRange.from = "2026-10-06";
   CQPUI.state.statsRange.to = "2026-10-05";
   CQPUI.go("stats");
-  const statsHtml = dom.getElementById("main").innerHTML;
+  const statsHtml = app.main();
   assert.ok(statsHtml.indexOf("起始日期不能晚于结束日期") > 0, "统计页显示冻结文案");
   assert.equal(statsHtml.indexOf("must not be later than"), -1);
   CQPUI.state.statsRange.scope = "all";
@@ -546,11 +603,11 @@ test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", 
 
   // F-03：P5 每题明细含「有把握对」列
   CQPUI.go("stats");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("有把握对") > 0, "明细表含有把握对列");
+  assert.ok(app.main().indexOf("有把握对") > 0, "明细表含有把握对列");
 
   // F-09：部分节点可勾选，candidatePool 按 partCode 过滤
   CQPUI.go("setup");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf('data-act="sel-part"') > 0, "部分节点有勾选框");
+  assert.ok(app.main().indexOf('data-act="sel-part"') > 0, "部分节点有勾选框");
   const allPool = CQPUI.__test.candidatePool().length;
   CQPUI.state.sel.parts = ["B"];
   const basePool = CQPUI.__test.candidatePool().length;
@@ -566,7 +623,7 @@ test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", 
 
   // F-10：总览/明细表列排序 + P5 → P7 按钮
   CQPUI.go("stats");
-  const statsPage = dom.getElementById("main").innerHTML;
+  const statsPage = app.main();
   assert.ok(statsPage.indexOf('data-page="io"') > 0, "P5 有跳转 P7 的按钮");
   assert.ok(statsPage.indexOf('data-act="stats-sort"') > 0, "表头可排序");
   assert.equal(JSON.stringify(CQPUI.state.statsSort.detail), JSON.stringify({ key: "attempts", dir: "desc" }));
@@ -576,18 +633,18 @@ test("UI smoke: repair guards (range text, part filter, sorting, danger zone)", 
   assert.equal(JSON.stringify(CQPUI.state.statsSort.detail), JSON.stringify({ key: "qid", dir: "desc" }));
   CQPUI.__test.action("stats-sort", fakeActionElement({ "data-table": "chapter", "data-key": "accuracy" }));
   assert.equal(JSON.stringify(CQPUI.state.statsSort.chapter), JSON.stringify({ key: "accuracy", dir: "desc" }));
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("▼") > 0, "表头显示排序指示");
+  assert.ok(app.main().indexOf("▼") > 0, "表头显示排序指示");
 
-  fs.rmSync(artifactPath, { force: true });
+  // 危险操作区的「清空」走服务端 DELETE（这里只验证请求语义，不真的把页面清掉）
+  CQPUI.state.store.records = [];
+  CQPUI.state.store.wrongbook = {};
 });
 
-test("UI smoke: t20 regressions (today-correct sum, manual removal survives unload, sel defense)", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
-  CQPUI.render();
-  const main = () => dom.getElementById("main").innerHTML;
-  const bank = CQP.__test.bank;
+test("UI smoke: t20 regressions (today-correct sum, manual removal survives unload, sel defense)", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
+  const main = () => app.main();
+  const bank = ANSWERS;
 
   // ① 首页「今日正确」必须是数值和：空记录 → 0；1 有把握对 + 2 猜对 + 1 错 → 3（不是 12）
   CQPUI.go("home");
@@ -624,9 +681,14 @@ test("UI smoke: t20 regressions (today-correct sum, manual removal survives unlo
   // ② F-01：练习答错 → 错题本手动移出 → beforeunload/pagehide/flush 后仍为 removed(manual)
   const target = singles[0];
   const wrongKey = target.options.map((o) => o.key).find((key) => target.answer.indexOf(key) < 0);
-  CQPUI.__test.startPractice("practice_chapter", [target], { title: "F-01" });
+  CQPUI.__test.startPractice(
+    "practice_chapter",
+    [CQP.__test.bank.questions.find((q) => q.id === target.id)],
+    { title: "F-01" }
+  );
   dom.setChecked([wrongKey]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   assert.equal(CQPUI.state.store.wrongbook[target.id].state, "active", "答错即时进错题本");
   CQPUI.go("wrongbook");
   assert.ok(main().indexOf('data-act="wrong-remove"') > 0, "错题本页可移出");
@@ -638,12 +700,13 @@ test("UI smoke: t20 regressions (today-correct sum, manual removal survives unlo
   dom.fireWindow("beforeunload");
   dom.fireWindow("pagehide");
   CQPUI.__test.flushPractice();
+  await app.settle();
 
   assert.equal(CQPUI.state.store.wrongbook[target.id].state, "removed", "卸载兜底不得回滚手动移出");
   assert.equal(CQPUI.state.store.wrongbook[target.id].removedReason, "manual");
   assert.equal(CQPUI.state.store.records.length, recordsBeforeFlush, "兜底只落库记录、不重复计数");
-  const persisted = JSON.parse(dom.storageMap.get("cqp.v1.wrongbook"));
-  assert.equal(persisted[target.id].state, "removed", "localStorage 中仍为 removed");
+  const persisted = app.serverStore().wrongbook;
+  assert.equal(persisted[target.id].state, "removed", "服务端副本仍是 removed");
   assert.equal(persisted[target.id].removedReason, "manual");
   assert.equal(CQP.wrongbookCountActive(CQPUI.state.store.wrongbook), 0, "在册错题数不回升（0）");
 
@@ -661,18 +724,20 @@ test("UI smoke: t20 regressions (today-correct sum, manual removal survives unlo
 
   // ②-c 同类第三处（模拟赛复盘）：手动移出后成绩页改「有把握」不得复活条目
   CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
+  CQPUI.__test.action("mock-start", fakeActionElement({ "data-act": "mock-start" }));
+  await app.settle();
   const mock = CQPUI.__test.mockState();
   const mockQid = mock.paper.questionIds.filter((qid) => !CQPUI.state.store.wrongbook[qid])[0];
-  const mockQuestion = CQP.questionById(CQP.getBank(), mockQid);
-  if (mockQuestion.options.length > 0) dom.setChecked(mockQuestion.answer.slice());
+  const mockAnswer = answerFor(mockQid);
+  if (mockAnswer.options.length > 0) dom.setChecked(mockAnswer.answer.slice());
   else {
     const input = dom.makeElement("input");
-    input.value = mockQuestion.answer[0];
+    input.value = mockAnswer.answer[0];
     dom.register("#mockBlank", input);
   }
-  CQPUI.__test.action("mock-next");
-  CQPUI.__test.submitMock(false);
+  CQPUI.__test.action("mock-next", fakeActionElement({ "data-act": "mock-next" }));
+  await CQPUI.__test.submitMock(false);
+  await app.settle();
   CQPUI.__test.setMockConfidence(mockQid, "guessed");
   assert.equal(CQPUI.state.store.wrongbook[mockQid].state, "active", "答对+带猜测按 8.3 入册");
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": mockQid }));
@@ -694,104 +759,111 @@ test("UI smoke: t20 regressions (today-correct sum, manual removal survives unlo
   let interactionThrew = null;
   try {
     CQPUI.__test.action("sel-tag", fakeActionElement({ "data-tag": "密码法" }));
-    dom.fire(dom.getElementById("main"), "change", { target: { closest: () => ({ getAttribute: () => "sel-part", value: "B", checked: true }) } });
+    dom.fire(dom.getElementById("main"), "change", {
+      target: { closest: () => ({ getAttribute: () => "sel-part", value: "B", checked: true }) },
+    });
   } catch (err) {
     interactionThrew = err;
   }
   assert.equal(interactionThrew, null, "缺字段时的交互也不抛错");
   CQPUI.state.sel = savedSel;
-
-  fs.rmSync(artifactPath, { force: true });
 });
 
-test("UI smoke: t24 (manual removal is never resurrected by snapshot replays)", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
-  CQPUI.render();
-  const bank = CQP.__test.bank;
-  const persisted = (qid) => JSON.parse(dom.storageMap.get("cqp.v1.wrongbook") || "{}")[qid];
+test("UI smoke: t24 (manual removal is never resurrected by snapshot replays)", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
+  const bank = ANSWERS;
   const stateOf = (qid) => (CQPUI.state.store.wrongbook[qid] ? CQPUI.state.store.wrongbook[qid].state : undefined);
   const reasonOf = (qid) => (CQPUI.state.store.wrongbook[qid] ? CQPUI.state.store.wrongbook[qid].removedReason : undefined);
+  /** 服务端副本里的错题本条目（persist 走 250ms 防抖，断言前先 settle） */
+  const persisted = async (qid) => {
+    await app.settle();
+    return app.serverStore().wrongbook[qid];
+  };
   const singles = bank.questions.filter((q) => q.sectionType === "single" && q.options.length === 4);
   const wrongKeyOf = (question) => question.options.map((o) => o.key).find((key) => question.answer.indexOf(key) < 0);
+  /** 把带答案的题换成「服务端下发」的那份对象，判分仍走 /api/practice/grade */
+  const served = (question) => CQP.__test.bank.questions.find((item) => item.id === question.id);
 
   // ① F-01b：练习答错 → 提交 → 手动移出 → 改信心×1 → 「下一题」 → 必须仍为 removed/manual
   const q1 = singles[0];
-  CQPUI.__test.startPractice("practice_chapter", [q1], { title: "t24-S1" });
+  CQPUI.__test.startPractice("practice_chapter", [served(q1)], { title: "t24-S1" });
   dom.setChecked([wrongKeyOf(q1)]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   assert.equal(stateOf(q1.id), "active", "S1 前置：答错即时入册");
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": q1.id }));
   assert.equal(stateOf(q1.id), "removed");
-  assert.equal(persisted(q1.id).removedReason, "manual", "S1 前置：localStorage = removed/manual");
+  assert.equal((await persisted(q1.id)).removedReason, "manual", "S1 前置：服务端副本 = removed/manual");
   CQPUI.__test.action("conf", fakeActionElement({ "data-conf": "confident" }));
   assert.equal(stateOf(q1.id), "removed", "S1: 改信心×1 不复活");
-  CQPUI.__test.action("prac-next");
+  CQPUI.__test.action("prac-next", fakeActionElement({ "data-act": "prac-next" }));
   assert.equal(stateOf(q1.id), "removed", "S1: 「下一题」不得复活（F-01b）");
   assert.equal(reasonOf(q1.id), "manual", "S1: 移出原因仍为 manual");
-  assert.equal(persisted(q1.id).state, "removed", "S1: localStorage 一致（removed）");
-  assert.equal(persisted(q1.id).removedReason, "manual", "S1: localStorage 一致（manual）");
+  assert.equal((await persisted(q1.id)).state, "removed", "S1: 服务端副本一致（removed）");
+  assert.equal((await persisted(q1.id)).removedReason, "manual", "S1: 服务端副本一致（manual）");
   assert.equal(CQP.wrongbookCountActive(CQPUI.state.store.wrongbook), 0, "S1: 在册数 0");
 
   // ② F-01b 变体：改信心×2 + 「交卷并结算」 → 仍不复活
   const q2 = singles[1];
-  CQPUI.__test.startPractice("practice_chapter", [q2], { title: "t24-S2" });
+  CQPUI.__test.startPractice("practice_chapter", [served(q2)], { title: "t24-S2" });
   dom.setChecked([wrongKeyOf(q2)]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": q2.id }));
   assert.equal(stateOf(q2.id), "removed");
   CQPUI.__test.action("conf", fakeActionElement({ "data-conf": "confident" }));
   CQPUI.__test.action("conf", fakeActionElement({ "data-conf": "confident" }));
   assert.equal(stateOf(q2.id), "removed", "S2: 改信心×2 不复活（F-01b 变体）");
-  CQPUI.__test.action("prac-finish"); // 「交卷并结算」= commitItem + 二次确认弹窗
+  CQPUI.__test.action("prac-finish", fakeActionElement({ "data-act": "prac-finish" })); // 「交卷并结算」= commitItem + 二次确认弹窗
   assert.equal(stateOf(q2.id), "removed", "S2: 「交卷并结算」不得复活");
-  assert.equal(persisted(q2.id).state, "removed", "S2: localStorage 一致（removed）");
-  assert.equal(persisted(q2.id).removedReason, "manual", "S2: localStorage 一致（manual）");
+  assert.equal((await persisted(q2.id)).state, "removed", "S2: 服务端副本一致（removed）");
+  assert.equal((await persisted(q2.id)).removedReason, "manual", "S2: 服务端副本一致（manual）");
 
   // ③ F-01c：模拟赛「一键加入错题本」入册 → 手动移出 → 成绩页**首次**改信心 → 不得复活
   CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
+  CQPUI.__test.action("mock-start", fakeActionElement({ "data-act": "mock-start" }));
+  await app.settle();
   const mock = CQPUI.__test.mockState();
   const mockQid = mock.paper.questionIds.filter((qid) => !CQPUI.state.store.wrongbook[qid])[0];
-  const mockQuestion = CQP.questionById(CQP.getBank(), mockQid);
-  if (mockQuestion.options.length > 0) dom.setChecked([wrongKeyOf(mockQuestion)]);
+  const mockAnswer = answerFor(mockQid);
+  if (mockAnswer.options.length > 0) dom.setChecked([wrongKeyOf(mockAnswer)]);
   else {
     const input = dom.makeElement("input");
     input.value = "t24-wrong-answer";
     dom.register("#mockBlank", input);
   }
-  CQPUI.__test.action("mock-next");
-  CQPUI.__test.submitMock(false);
+  CQPUI.__test.action("mock-next", fakeActionElement({ "data-act": "mock-next" }));
+  await CQPUI.__test.submitMock(false);
+  await app.settle();
   assert.equal(CQPUI.state.store.wrongbook[mockQid], undefined, "S3 前置：模拟赛不自动写错题本");
-  CQPUI.__test.action("mock-wrong-to-book"); // 显式入册（不建立信心快照）
+  CQPUI.__test.action("mock-wrong-to-book", fakeActionElement({ "data-act": "mock-wrong-to-book" })); // 显式入册（不建立信心快照）
   assert.equal(stateOf(mockQid), "active", "S3 前置：一键加入错题本入册");
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": mockQid }));
   assert.equal(stateOf(mockQid), "removed");
   CQPUI.__test.setMockConfidence(mockQid, "confident"); // 快照懒建立 → 必须视为不在册
   assert.equal(stateOf(mockQid), "removed", "S3: 成绩页首次改信心不得复活（F-01c）");
-  assert.equal(persisted(mockQid).state, "removed", "S3: localStorage 一致（removed）");
-  assert.equal(persisted(mockQid).removedReason, "manual", "S3: localStorage 一致（manual）");
+  assert.equal((await persisted(mockQid)).state, "removed", "S3: 服务端副本一致（removed）");
+  assert.equal((await persisted(mockQid)).removedReason, "manual", "S3: 服务端副本一致（manual）");
 
   // ④ 正向（不得放宽）：新一次作答判错 → 该题重新入册
-  CQPUI.__test.startPractice("practice_chapter", [q1], { title: "t24-P1" });
+  CQPUI.__test.startPractice("practice_chapter", [served(q1)], { title: "t24-P1" });
   dom.setChecked([wrongKeyOf(q1)]);
-  CQPUI.__test.action("prac-submit");
+  CQPUI.__test.action("prac-submit", fakeActionElement({ "data-act": "prac-submit" }));
+  await app.settle();
   assert.equal(stateOf(q1.id), "active", "P1: 新一次作答判错必须重新入册");
   assert.equal(CQPUI.state.store.wrongbook[q1.id].lastWrongAt !== null, true, "P1: lastWrongAt 已更新");
-  assert.equal(persisted(q1.id).state, "active", "P1: localStorage 一致（active）");
+  assert.equal((await persisted(q1.id)).state, "active", "P1: 服务端副本一致（active）");
 
   // ⑤ 正向（不得放宽）：显式「重新加入错题本」与模拟赛「一键加入错题本」仍能重新入册
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": q1.id }));
   assert.equal(stateOf(q1.id), "removed");
   CQPUI.__test.action("wrong-readd", fakeActionElement({ "data-qid": q1.id }));
   assert.equal(stateOf(q1.id), "active", "P2: 手动「重新加入错题本」必须生效");
-  assert.equal(persisted(q1.id).state, "active", "P2: localStorage 一致（active）");
+  assert.equal((await persisted(q1.id)).state, "active", "P2: 服务端副本一致（active）");
   CQPUI.__test.action("wrong-remove", fakeActionElement({ "data-qid": mockQid }));
   assert.equal(stateOf(mockQid), "removed");
-  CQPUI.__test.action("mock-wrong-to-book");
+  CQPUI.__test.action("mock-wrong-to-book", fakeActionElement({ "data-act": "mock-wrong-to-book" }));
   assert.equal(stateOf(mockQid), "active", "P2: 模拟赛「一键加入错题本」必须生效");
-  assert.equal(persisted(mockQid).state, "active", "P2: localStorage 一致（active）");
-
-  fs.rmSync(artifactPath, { force: true });
+  assert.equal((await persisted(mockQid)).state, "active", "P2: 服务端副本一致（active）");
 });

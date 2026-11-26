@@ -12,3 +12,15 @@ Thumbs.db
 bank_text.json
 bank_text.txt
 *.tmp
+
+# ===== 服务端版（server 分支）=====
+# 运行时数据：SQLite、备份、上传的题库
+/data/
+# 本地配置
+.env
+.env.local
+# 构建产物（server 目标）
+/public/
+/dist/server.build-report.json
+# 日志
+*.log

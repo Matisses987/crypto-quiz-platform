@@ -1,0 +1,19 @@
+{
+  "name": "crypto-quiz-platform",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "2026 江苏省密码赛理论刷题平台（服务端多人版）",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "build": "node tools/build.mjs --target server --strict",
+    "build:legacy": "node tools/build.mjs --target offline",
+    "validate": "node tools/validate_bank.mjs",
+    "test": "node --test tests/"
+  },
+  "dependencies": {}
+}

@@ -12,13 +12,23 @@
     tagCounts: {},
     qById: new Map(),
     page: "home",
-    storageOk: true,
-    // t41 F-03：本地数据 schema 不兼容 / JSON 损坏时置 true —— 完全只读：persist() 直接 return，
-    // 导出入口改读磁盘原始数据（抢救导出），危险区「清空本地数据」也被拦下。
-    storageBlocked: false,
-    blockedCode: "",
-    blockedSchemaVersion: "",
-    blockedRescue: null,
+    // 服务端版：账号、题库标识、文档版本号、保存节流
+    user: null,
+    banks: [],
+    bankSlug: "",
+    rev: 0,
+    saveTimer: null,
+    saving: false,
+    saveAgain: false,
+    // 已从服务端取回的答案（qid → {answer, explanation, ...}），只存在内存
+    answers: new Map(),
+    // 取过答案但服务端没有（题已下架之类），不再重复请求
+    answerMiss: new Set(),
+    reviewLoading: false,
+    // 登录门当前 tab
+    authTab: "login",
+    // 最近一次保存是否失败（用于顶部提示与重试按钮）
+    saveError: false,
     sel: { mode: "practice_chapter", parts: [], chapters: [], types: [], tags: [], count: 20 },
     practice: null,
     mock: null,
@@ -36,10 +46,162 @@
     detailLimit: 60,
     io: { scope: "day", from: "", to: "", pending: null, report: null },
     mockTimer: null,
+    mockSaveTimer: null,
+    // 管理后台（仅 admin 可见）：用户列表 / 题库列表 / 审计日志
+    admin: null,
   };
 
   // ---------------------------------------------------------------- 基础工具
   function $(id) { return document.getElementById(id); }
+
+  // ---------------------------------------------------------------- 服务端 API
+  // 服务器版：题库、学习数据、判分全在服务端。这里只写相对路径 —— 构建时的
+  // selfContainmentCheck 禁止 src/ 里出现协议外链。
+  function httpError(status, message) {
+    var err = new Error(message || "请求失败");
+    err.status = status;
+    // text 是「可以给用户看的一句话」，只由服务端 {error} 字段或本地固定文案填充；
+    // 原始异常自带的描述一律不上屏（构建期 source.lint 会拦）。
+    err.text = message || "请求失败";
+    return err;
+  }
+
+  /** 统一的失败文案：只取 httpError 的 .text，网络异常等没有 .text 的走 fallback */
+  function failure(err, fallback) {
+    if (err && typeof err.text === "string" && err.text) return err.text;
+    return fallback || "操作失败";
+  }
+
+  function api(path, options) {
+    var opts = options || {};
+    var init = {
+      method: opts.method || "GET",
+      credentials: "same-origin",
+      headers: {},
+    };
+    if (opts.body !== undefined) {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(opts.body);
+    }
+    return fetch(path, init).then(function (res) {
+      if (res.status === 204) return null;
+      return res.text().then(function (text) {
+        var data = null;
+        if (text) {
+          try { data = JSON.parse(text); } catch (err) { data = null; }
+        }
+        if (res.status === 401) {
+          // 会话过期：回登录页（保留当前题库参数）
+          if (S.user) { S.user = null; renderAuthGate("登录已过期，请重新登录"); }
+          throw httpError(401, (data && data.error) || "请先登录");
+        }
+        if (!res.ok) throw httpError(res.status, (data && data.error) || "请求失败（" + res.status + "）");
+        return data;
+      });
+    });
+  }
+
+  function logout() {
+    if (S.saveTimer) { window.clearTimeout(S.saveTimer); S.saveTimer = null; }
+    api("/api/auth/logout", { method: "POST" })
+      .catch(function () { /* 网络失败也要退到登录页 */ })
+      .then(function () {
+        S.user = null;
+        S.store = null;
+        S.bank = null;
+        S.banks = [];
+        S.answers = new Map();
+        S.practice = null;
+        S.mock = null;
+        S.page = "home";
+        renderAuthGate("已退出登录");
+      });
+  }
+
+
+  // 导航按钮的 HTML（登录门会清空 #nav，登录后必须能重建）
+  var NAV_ITEMS = [
+    ["home", "首页"],
+    ["setup", "分类练习"],
+    ["wrongbook", "错题本"],
+    ["stats", "学习统计"],
+    ["team", "团队对比"],
+    ["io", "导出/导入"],
+    ["mock", "模拟选拔赛"],
+    ["review", "校对纠错"],
+  ];
+
+  function navHtml() {
+    var html = NAV_ITEMS.map(function (item) {
+      return '<button data-nav="' + item[0] + '">' + item[1] + "</button>";
+    }).join("");
+    return html + '<button data-nav="admin" id="navAdmin" class="hidden">管理</button>';
+  }
+
+  /** 登录门清空了 #nav；回到应用态时补回来（重复调用无副作用） */
+  function ensureNav() {
+    var nav = $("nav");
+    if (!nav) return;
+    if (!nav.querySelector || !nav.innerHTML) {
+      nav.innerHTML = navHtml();
+      return;
+    }
+    if (nav.innerHTML.indexOf("data-nav") < 0) nav.innerHTML = navHtml();
+  }
+
+  function renderAuthGate(message) {
+    var main = $("main");
+    if (!main) return;
+    $("nav").innerHTML = "";
+    $("whoami").textContent = "";
+    main.innerHTML =
+      '<div class="authgate"><div class="authcard">' +
+      '<h1>密码赛刷题平台</h1>' +
+      '<div class="muted">2026 江苏省密码行业职业技能竞赛（学生组）· 在线刷题</div>' +
+      (message ? '<div class="banner error mt12">' + esc(message) + "</div>" : "") +
+      '<div class="tabs mt16">' +
+      '<button data-act="auth-tab" data-tab="login" class="active">登录</button>' +
+      '<button data-act="auth-tab" data-tab="register">注册</button>' +
+      "</div>" +
+      '<form id="authForm" class="mt12" autocomplete="on">' +
+      '<label class="field"><span>用户名</span><input type="text" id="authUser" autocomplete="username" maxlength="24" required></label>' +
+      '<label class="field" id="authNickField" hidden><span>昵称（可选，用于团队统计）</span><input type="text" id="authNick" maxlength="20"></label>' +
+      '<label class="field"><span>密码</span><input type="password" id="authPass" autocomplete="current-password" maxlength="128" required></label>' +
+      '<div class="muted small" id="authHint">用户名 3–24 位，密码至少 8 位。</div>' +
+      '<button class="primary block mt12" id="authSubmit" type="submit">登录</button>' +
+      "</form></div></div>";
+    S.authTab = "login";
+    var form = $("authForm");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      doAuth();
+    });
+  }
+
+  function doAuth() {
+    var username = ($("authUser").value || "").trim();
+    var password = $("authPass").value || "";
+    var isRegister = S.authTab === "register";
+    if (username.length < 3) { toast("用户名至少 3 位"); return; }
+    if (password.length < 8) { toast("密码至少 8 位"); return; }
+    var btn = $("authSubmit");
+    btn.disabled = true;
+    var payload = { username: username, password: password };
+    if (isRegister) {
+      var nickname = ($("authNick").value || "").trim();
+      if (nickname) payload.displayName = nickname;
+    }
+    api(isRegister ? "/api/auth/register" : "/api/auth/login", { method: "POST", body: payload })
+      .then(function (data) {
+        S.user = data.user;
+        return bootAfterAuth();
+      })
+      .catch(function (err) {
+        toast(failure(err, "登录失败"));
+        btn.disabled = false;
+      });
+  }
+
 
   function esc(value) {
     return String(value === null || value === undefined ? "" : value).replace(/[&<>"']/g, function (ch) {
@@ -135,73 +297,83 @@
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
   }
 
-  // 读取原始 meta 里的 schemaVersion（不依赖异常消息，只呈现冻结文案）
-  function detectedSchemaVersion() {
-    try {
-      var backend = CQP.storage.backend();
-      if (!backend || !backend.getItem) return "?";
-      var rawMeta = backend.getItem(CQP.STORAGE_KEYS.meta);
-      if (!rawMeta) return "?";
-      var parsed = JSON.parse(rawMeta);
-      return parsed && typeof parsed.schemaVersion === "string" ? parsed.schemaVersion : "?";
-    } catch (err) {
-      return "?";
-    }
-  }
-
   // ---------------------------------------------------------------- 初始化
-  function initStorage() {
-    var probe = CQP.storage.probe();
-    S.storageOk = probe.available;
-    if (!probe.available) {
-      banner("error", "本地存储不可用，数据无法保存，请立即导出备份（当前会话仍可答题，刷新即丢失）");
-    }
-    try {
-      S.store = CQP.storage.load();
-    } catch (err) {
-      S.store = CQP.emptyStore();
-      // t41 F-03：加载失败 ⇒ 进入完全只读的「抢救模式」。绝不把空内存态写回磁盘
-      //（否则一次刷新/卸载就会静默抹掉用户全部数据），并让导出入口改读磁盘原始数据。
-      S.storageBlocked = true;
-      S.blockedCode = err && err.code ? String(err.code) : "E_LOAD";
-      S.blockedSchemaVersion = detectedSchemaVersion();
-      if (err && err.code === "E_VERSION") {
-        banner(
-          "error",
-          "数据版本不兼容（发现 " + S.blockedSchemaVersion + "，程序支持 " + CQP.STORE_SCHEMA_VERSION +
-            "）。本次运行不会写入任何数据，你的数据仍保存在浏览器中（本地数据未被改动）；请先导出备份（导出入口已切换为抢救模式，会直接读取浏览器里的原始数据），再使用对应版本的程序打开。"
-        );
-      } else if (err && err.code === "E_STORE_PARSE") {
-        banner(
-          "error",
-          "本地数据损坏（JSON 解析失败）。本次运行不会写入任何数据，你的数据仍保存在浏览器中（本地数据未被改动）；请先导出备份（无法解析的内容会以原始字符串一并导出）后再排查。"
-        );
-      } else {
-        banner("error", "本地数据读取失败。本次运行不会写入任何数据，你的数据仍保存在浏览器中（本地数据未被改动）；请先导出备份。");
+
+  /** 取当前账号；未登录则显示登录门并中断启动链 */
+  function initSession() {
+    return api("/api/me").then(function (data) {
+      if (!data || !data.user) {
+        S.user = null;
+        renderAuthGate("");
+        return false;
       }
-    }
-    CQP.setStore(S.store);
-    S.statsRange.from = today();
-    S.io.from = today();
-    S.io.to = today();
+      S.user = data.user;
+      return true;
+    });
   }
 
-  function initBank() {
-    var raw = null;
-    try {
-      raw = JSON.parse($("bank-data").textContent);
-    } catch (err) {
-      raw = null;
-    }
-    if (!raw) {
-      banner("error", "内嵌题库缺失或损坏，无法开始练习；请重新获取成品文件。");
-      return false;
-    }
-    S.bankRaw = raw;
-    CQP.setBank(raw);
-    S.bankValidation = CQP.validateBank(raw, { fixture: raw.fixture === true });
-    refreshBank();
-    return true;
+  function loadBanks() {
+    return api("/api/banks").then(function (data) {
+      S.banks = (data && data.banks) || [];
+      if (S.banks.length === 0) {
+        banner("error", "服务端还没有任何题库；请联系管理员导入。");
+        return false;
+      }
+      var saved = null;
+      try { saved = window.localStorage.getItem("cqp.bankSlug"); } catch (err) { saved = null; }
+      var exists = S.banks.some(function (b) { return b.slug === saved; });
+      S.bankSlug = exists ? saved : S.banks[0].slug;
+      return true;
+    });
+  }
+
+  function loadBank(slug) {
+    return api("/api/banks/" + encodeURIComponent(slug)).then(function (raw) {
+      if (!raw) return false;
+      S.bankRaw = raw;
+      CQP.setBank(raw);
+      // 下发题库已抹掉 answer/explanation，本地 validateBank 必然把每道题报成「缺答案」。
+      // 用服务端导入时的自检结论（raw.selfCheck），没有就当作未校验。
+      S.bankValidation = raw.selfCheck
+        ? { ok: raw.selfCheck.ok === true, errors: new Array(raw.selfCheck.errors || 0).fill({ code: "SERVER" }), warnings: [] }
+        : null;
+      refreshBank();
+      return true;
+    });
+  }
+
+  function loadStore(slug) {
+    return api("/api/store?bank=" + encodeURIComponent(slug)).then(function (data) {
+      S.rev = data && typeof data.rev === "number" ? data.rev : 0;
+      S.store = (data && data.store) || CQP.emptyStore();
+      // 昵称与账号保持一致（团队统计按 display_name 汇总）
+      if (S.user && (!S.store.meta.nickname || !S.store.meta.nickname.trim())) {
+        S.store.meta.nickname = S.user.displayName || S.user.username;
+      }
+      CQP.setStore(S.store);
+      S.statsRange.from = today();
+      S.io.from = today();
+      S.io.to = today();
+      return true;
+    });
+  }
+
+  /** 切换题库：题库与学习文档都换一套 */
+  function switchBank(slug) {
+    if (!slug || slug === S.bankSlug) return Promise.resolve(false);
+    S.bankSlug = slug;
+    S.answers = new Map();
+    S.practice = null;
+    S.mock = null;
+    try { window.localStorage.setItem("cqp.bankSlug", slug); } catch (err) { /* 隐私模式忽略 */ }
+    return loadBank(slug).then(function (ok) {
+      if (!ok) return false;
+      return loadStore(slug).then(function () {
+        S.page = "home";
+        render();
+        return true;
+      });
+    });
   }
 
   function refreshBank() {
@@ -211,43 +383,170 @@
     S.qById = CQP.questionIndex(S.bank);
   }
 
+  /**
+   * 落库：服务端权威副本 + 乐观锁。
+   *
+   * 用 250ms 防抖合并突发写入（一次提交会连带错题本、记录、meta 三处变更）；
+   * 无写入进行中时立刻发，正在写则排队一次（saveAgain），避免并发 PUT 互相打回。
+   */
   function persist() {
     CQP.setStore(S.store);
-    // t41 F-03：只读抢救模式——绝不写回磁盘（含卸载兜底 flushPractice 触发的这次）
-    if (S.storageBlocked) return;
-    if (!S.storageOk) return;
-    var res = CQP.storage.save(S.store);
-    if (!res.ok) {
-      S.storageOk = false;
-      banner("error", res.error.message);
+    if (!S.user) return;
+    if (S.saveTimer) window.clearTimeout(S.saveTimer);
+    S.saveTimer = window.setTimeout(sendStore, 250);
+  }
+
+  function sendStore() {
+    S.saveTimer = null;
+    if (!S.user) return;
+    if (S.saving) { S.saveAgain = true; return; }
+    S.saving = true;
+    var payload = { baseRev: S.rev, bankSlug: S.bankSlug, store: S.store };
+    api("/api/store", { method: "PUT", body: payload })
+      .then(function (data) {
+        if (!data) return;
+        S.rev = data.rev;
+        if (data.merged) {
+          // 服务端合并过（另一台设备先写过）：以服务端结果为准覆盖内存态
+          S.store = data.store;
+          CQP.setStore(S.store);
+          refreshBank();
+          render();
+          var added = data.added || {};
+          toast("已与另一台设备的记录合并：新增 " + (added.records || 0) + " 条记录、错题本 +" + (added.wrongbook || 0));
+        }
+        S.saveError = false;
+      })
+      .catch(function (err) {
+        if (err && err.status === 401) return; // 已经跳登录门
+        S.saveError = true;
+        banner("error", "学习数据保存失败：" + failure(err, "网络异常") + "（本页数据仍在，稍后会自动重试）");
+      })
+      .then(function () {
+        S.saving = false;
+        if (S.saveAgain) { S.saveAgain = false; sendStore(); }
+      });
+  }
+
+  /** 立即提交（离开页面、交卷等场合） */
+  function flushStore() {
+    if (S.saveTimer) {
+      window.clearTimeout(S.saveTimer);
+      S.saveTimer = null;
+    }
+    if (S.user && !S.saving) sendStore();
+  }
+
+  // ---------------------------------------------------------------- 答案缓存
+  /**
+   * 题库下发时已剥掉 answer，正确答案与解析只能按需问服务端。
+   * 只缓存内存，不落 localStorage —— 换台设备要重新取，但不会把答案留在磁盘上。
+   */
+  function hasAnswer(qid) { return S.answers.has(qid); }
+
+  function answerOf(qid) { return S.answers.get(qid) || null; }
+
+  function fetchAnswers(qids, includeAll) {
+    var need = [];
+    for (var i = 0; i < qids.length; i += 1) {
+      if (!S.answers.has(qids[i])) need.push(qids[i]);
+      if (need.length >= 400) break;
+    }
+    if (need.length === 0) return Promise.resolve(true);
+    return api("/api/practice/answers", {
+      method: "POST",
+      body: { bankSlug: S.bankSlug, qids: need, includeAll: includeAll === true },
+    }).then(function (data) {
+      var items = (data && data.items) || [];
+      for (var j = 0; j < items.length; j += 1) S.answers.set(items[j].qid, items[j]);
+      return items.length;
+    });
+  }
+
+  /**
+   * 收下一批 `{ qid: {answer, answerText, explanation, responseMode} }`（模拟考交卷后返回的形状），
+   * 写进答案缓存。之后 applyAnswers 就能把它们回填到真实的题目对象上。
+   */
+  function absorbAnswerMap(map) {
+    if (!map || typeof map !== "object") return 0;
+    var count = 0;
+    Object.keys(map).forEach(function (qid) {
+      var item = map[qid];
+      if (!item) return;
+      S.answers.set(qid, {
+        qid: qid,
+        answer: Array.isArray(item.answer) ? item.answer : [],
+        answerText: item.answerText || "",
+        explanation: item.explanation || "",
+        responseMode: item.responseMode || "",
+        answerStatus: "ok",
+        needsReview: false,
+      });
+      count += 1;
+    });
+    return count;
+  }
+
+  /** qid 列表 → 真实题目对象（跳过已不存在的题） */
+  function questionsOf(qids) {
+    var out = [];
+    for (var i = 0; i < qids.length; i += 1) {
+      var question = S.qById.get(qids[i]);
+      if (question) out.push(question);
+    }
+    return out;
+  }
+
+  /** 把服务端答案回填到题目对象上，让上游的答案展示/判分视图能直接用 */
+  function applyAnswers(questions) {
+    for (var i = 0; i < questions.length; i += 1) {
+      var q = questions[i];
+      var cached = S.answers.get(q.id);
+      if (!cached) continue;
+      q.answer = cached.answer;
+      q.explanation = cached.explanation;
+      q.answerStatus = cached.answerStatus;
+      q.needsReview = cached.needsReview;
     }
   }
 
-  // t41 F-03：阻断态文案与抢救导出的统一入口 ------------------------------------
-  function blockedReasonText() {
-    if (S.blockedCode === "E_VERSION") return "数据版本不兼容（发现 " + (S.blockedSchemaVersion || "?") + "，程序支持 " + CQP.STORE_SCHEMA_VERSION + "）";
-    if (S.blockedCode === "E_STORE_PARSE") return "本地数据损坏（JSON 解析失败）";
-    return "本地数据读取失败";
+  /**
+   * 视图要显示答案时先确认答案已在缓存里。
+   * includeAll=false 时服务端只返回「本人答过的题」，刷题页用它不会提前泄题；
+   * 校对页要覆盖全部题目，必须显式传 true。
+   */
+  function ensureAnswersFor(questions, includeAll) {
+    var need = [];
+    for (var i = 0; i < questions.length; i += 1) {
+      var qid = questions[i].id;
+      if (S.answers.has(qid) || S.answerMiss.has(qid)) continue;
+      need.push(qid);
+    }
+    if (need.length === 0) return null;
+    S.reviewLoading = true;
+    return fetchAnswers(need, includeAll === true)
+      .then(function () {
+        for (var j = 0; j < need.length; j += 1) {
+          if (!S.answers.has(need[j])) S.answerMiss.add(need[j]);
+        }
+        applyAnswers(questions);
+      })
+      .catch(function (err) {
+        for (var k = 0; k < need.length; k += 1) S.answerMiss.add(need[k]);
+        toast(failure(err, "取答案失败"));
+      })
+      .then(function () {
+        S.reviewLoading = false;
+        render();
+      });
   }
 
-  // 从磁盘原样读取 cqp.v1.* 组装抢救导出（缓存，只读模式下磁盘内容不会再变）
-  function rescuePayload() {
-    if (S.blockedRescue) return S.blockedRescue;
-    var raw = CQP.storage.readRaw ? CQP.storage.readRaw() : {};
-    var payload = CQP.rescueExport({
-      raw: raw,
-      bankVersion: bankVersion(),
-      nowISO: CQP.isoNow(),
-      reason: S.blockedCode || "E_LOAD",
-      detectedSchemaVersion: S.blockedSchemaVersion || detectedSchemaVersion(),
-    });
-    S.blockedRescue = payload;
-    return payload;
-  }
-
-  function rescueFileName() {
-    var payload = rescuePayload();
-    return CQP.exportFileName({ nickname: payload.exportedBy.nickname, scope: "all", nowISO: CQP.isoNow() }).replace("_全部_", "_抢救导出_");
+  function nick() {
+    if (S.store && S.store.meta && S.store.meta.nickname && S.store.meta.nickname.length > 0) {
+      return S.store.meta.nickname;
+    }
+    if (S.user) return S.user.displayName || S.user.username;
+    return "未命名";
   }
 
   function myRecords() {
@@ -276,47 +575,94 @@
   }
 
   // ---------------------------------------------------------------- 昵称
+  // 服务器版：昵称就是账号昵称（displayName），与团队统计口径一致，不再让用户手填。
   function ensureNickname() {
+    if (!S.user) return;
     if (S.store.meta.nickname && S.store.meta.nickname.trim().length > 0) return;
+    var value = S.user.displayName || S.user.username;
+    S.store.meta.nickname = value;
+    CQP.touchMeta(S.store, { nickname: value }, CQP.isoNow());
+    persist();
+  }
+
+  function changeNickname() {
     openModal(
-      "<h3>请填写昵称</h3><p class=\"muted\">昵称用于导出学习记录与他人合并统计（1～20 字符）；修改昵称不会改变历史记录归属。</p>" +
-        '<input type="text" id="nickInput" maxlength="20" style="width:100%" placeholder="例如：小明">' +
-        '<div class="actions"><button class="primary" data-act="nick-save">保存并开始</button></div>',
+      "<h3>修改昵称</h3><p class=\"muted\">昵称与账号一致，用于团队统计；请在账号菜单里修改显示名。历史记录仍归属原昵称。</p>" +
+        '<div class="actions"><button class="primary" data-act="modal-close">知道了</button></div>',
       function (box) {
-        var input = box.querySelector("#nickInput");
-        input.focus();
-        box.querySelector('[data-act="nick-save"]').addEventListener("click", function () {
-          var value = input.value.trim().slice(0, 20);
-          if (!value) { toast("昵称不能为空"); return; }
-          S.store.meta.nickname = value;
-          CQP.touchMeta(S.store, { nickname: value }, CQP.isoNow());
-          persist();
-          closeModal();
-          render();
+        box.querySelector('[data-act="modal-close"]').addEventListener("click", closeModal);
+      }
+    );
+  }
+
+  // ---------------------------------------------------------------- 账号菜单
+  /**
+   * 账号菜单：改显示名（团队统计口径）、改密码、退出登录。
+   * 显示名改完立刻同步到 store.meta.nickname，否则团队页会显示旧名字。
+   */
+  function openAccount() {
+    if (!S.user) return;
+    var name = S.user.displayName || S.user.username;
+    openModal(
+      '<h3>账号</h3>' +
+        '<div class="muted">用户名 <b class="mono">' + esc(S.user.username) + "</b>" +
+        (S.user.role === "admin" ? ' · <span class="badge blue">管理员</span>' : "") +
+        " · 当前题库 <b>" + esc(S.bankSlug || "—") + "</b></div>" +
+        '<label class="field mt12"><span>显示名（团队统计里显示的就是它，最多 20 字）</span>' +
+        '<input type="text" id="accName" maxlength="20" value="' + esc(name) + '"></label>' +
+        '<div class="row mt8"><button class="primary" data-act="acc-name">保存显示名</button></div>' +
+        '<hr class="sep">' +
+        '<label class="field"><span>当前密码</span><input type="password" id="accOld" autocomplete="current-password" maxlength="128"></label>' +
+        '<label class="field"><span>新密码（8–128 位；改完其他设备需重新登录）</span><input type="password" id="accNew" autocomplete="new-password" maxlength="128"></label>' +
+        '<label class="field"><span>再输一次新密码</span><input type="password" id="accNew2" autocomplete="new-password" maxlength="128"></label>' +
+        '<div class="row mt8"><button class="primary" data-act="acc-pass">修改密码</button></div>' +
+        '<hr class="sep">' +
+        '<div class="row between"><button data-act="logout">退出登录</button>' +
+        '<button data-act="modal-close">关闭</button></div>',
+      function (box) {
+        box.addEventListener("click", function (event) {
+          var target = event.target.closest("[data-act]");
+          if (!target) return;
+          var act = target.getAttribute("data-act");
+          if (act === "modal-close") { closeModal(); return; }
+          if (act === "logout") { closeModal(); logout(); return; }
+          if (act === "acc-name") { saveDisplayName($("accName").value); return; }
+          if (act === "acc-pass") {
+            savePassword($("accOld").value, $("accNew").value, $("accNew2").value);
+            return;
+          }
         });
       }
     );
   }
 
-  function changeNickname() {
-    openModal(
-      "<h3>修改昵称</h3><p class=\"muted\">只改当前昵称；历史记录与错题本仍归属原昵称。</p>" +
-        '<input type="text" id="nickInput" maxlength="20" style="width:100%" value="' + esc(S.store.meta.nickname) + '">' +
-        '<div class="actions"><button data-act="modal-close">取消</button><button class="primary" data-act="nick-save">保存</button></div>',
-      function (box) {
-        box.querySelector('[data-act="modal-close"]').addEventListener("click", closeModal);
-        box.querySelector('[data-act="nick-save"]').addEventListener("click", function () {
-          var value = box.querySelector("#nickInput").value.trim().slice(0, 20);
-          if (!value) { toast("昵称不能为空"); return; }
-          S.store.meta.nickname = value;
-          CQP.touchMeta(S.store, { nickname: value }, CQP.isoNow());
-          persist();
-          closeModal();
-          render();
-          toast("昵称已更新；历史记录仍归属原昵称");
-        });
-      }
-    );
+  function saveDisplayName(raw) {
+    var value = String(raw || "").trim();
+    if (value.length < 1) { toast("显示名不能为空"); return; }
+    api("/api/auth/profile", { method: "POST", body: { displayName: value } })
+      .then(function (data) {
+        S.user = data.user;
+        var next = S.user.displayName || S.user.username;
+        S.store.meta.nickname = next;
+        CQP.touchMeta(S.store, { nickname: next }, CQP.isoNow());
+        persist();
+        closeModal();
+        toast("显示名已更新为 " + next);
+        render();
+      })
+      .catch(function (err) { toast(failure(err, "保存失败")); });
+  }
+
+  function savePassword(current, next, again) {
+    if (!current) { toast("请填写当前密码"); return; }
+    if (next.length < 8 || next.length > 128) { toast("新密码长度需为 8–128 位"); return; }
+    if (next !== again) { toast("两次输入的新密码不一致"); return; }
+    api("/api/auth/password", { method: "POST", body: { currentPassword: current, newPassword: next } })
+      .then(function () {
+        closeModal();
+        infoBox("密码已修改", "<p>其他设备上的登录已失效；本页保持登录状态。</p>");
+      })
+      .catch(function (err) { toast(failure(err, "修改失败")); });
   }
 
   // ---------------------------------------------------------------- 首页 P0
@@ -343,7 +689,7 @@
 
     return (
       '<div class="card"><div class="row between"><div><h1>今日学习</h1>' +
-      '<div class="muted">昵称：<b>' + esc(nick()) + "</b> ｜ 本地自然日：" + esc(day) + " ｜ 设备：" + esc(S.store.meta.deviceId || "-") + "</div></div>" +
+      '<div class="muted">昵称：<b>' + esc(nick()) + "</b> ｜ 本地自然日：" + esc(day) + " ｜ 题库：" + esc(S.bank ? S.bank.title : "-") + "</div></div>" +
       '<div class="row"><button data-act="nick-edit">修改昵称</button></div></div>' +
       '<div class="kv mt12">' +
       '<div class="item"><div class="k">今日已答</div><div class="v">' + todayRecords.length + "</div></div>" +
@@ -373,7 +719,9 @@
       '<div class="item"><div class="k">纠错覆盖层</div><div class="v small">' + overrides + " 题（标疑问 " + flagged + "）</div></div>" +
       '<div class="item"><div class="k">每题明细</div><div class="v small">已练 ' + practicedQids().size + " 题</div></div>" +
       "</div>" +
-      '<div class="muted mt8">题库自检：' + (validationOk ? "通过（符合冻结契约）" : '<span class="badge red">有数据质量偏差 ' + (S.bankValidation ? S.bankValidation.errors.length : 0) + " 项</span>") +
+      '<div class="muted mt8">题库自检：' + (validationOk
+        ? "通过（服务端导入时已校验）"
+        : (S.bankValidation ? '<span class="badge red">服务端校验发现问题 ' + S.bankValidation.errors.length + " 项</span>" : '<span class="badge gray">未校验（题库由服务端导入，前端不重复校验）</span>')) +
       "；待校对 " + needsReview + " 题，缺答案 " + missing + " 题（缺答案题不参与出题，可由校对面板补录）。</div>" +
       '<div class="row mt12"><button class="primary" data-act="export-backup">导出全部备份</button>' +
       '<button data-act="io-page">导入队友记录</button>' +
@@ -550,6 +898,11 @@
     var flagged = CQP.isFlagged(S.store.overrides, question.id);
     var answeredCount = P.items.filter(function (entry) { return entry && entry.submitted; }).length;
 
+    // 已提交但本机还没拿到标准答案（换设备 / 刷新后回来）：先取答案再渲染着色
+    if (item.submitted && !hasAnswer(question.id) && ensureAnswersFor([question], false)) {
+      return '<div class="card"><h1>正在取回标准答案</h1><div class="muted mt8">这题你已经答过，正在从服务端取回答案与解析…</div></div>';
+    }
+
     var optionsHtml = "";
     var stemControl = "";
     if (mode === "blank") {
@@ -622,6 +975,15 @@
   function renderResult() {
     var P = S.practice;
     if (!P) return renderSetup();
+    // 结算表要逐题显示正确答案；换设备/刷新回来后缓存可能是空的，补齐再渲染
+    var submittedQuestions = [];
+    for (var s = 0; s < P.questions.length; s += 1) {
+      if (P.items[s] && P.items[s].submitted) submittedQuestions.push(P.questions[s]);
+    }
+    if (ensureAnswersFor(submittedQuestions, false)) {
+      return '<div class="card"><h1>正在取回本轮答案</h1><div class="muted mt8">正在向服务端取 ' +
+        submittedQuestions.length + " 道题的标准答案，取回后自动显示结算…</div></div>";
+    }
     var score = CQP.practiceScore(practiceRecords(), { plannedCount: P.planned });
     var rows = [];
     for (var i = 0; i < P.questions.length; i += 1) {
@@ -784,26 +1146,54 @@
     var P = S.practice;
     var question = P.questions[P.idx];
     var item = practiceItem(P.idx);
-    if (item.submitted) return;
+    if (item.submitted || item.submitting) return;
     var myAnswer = readAnswerFromDom(question);
     if (myAnswer.length === 0 || (myAnswer.length === 1 && myAnswer[0] === "")) {
       toast("请先作答，或点击「跳过」");
       return;
     }
-    var verdict = CQP.judge(question, myAnswer);
-    item.myAnswer = myAnswer;
-    item.correct = verdict.correct;
-    item.confidence = "confident";
-    item.color = CQP.color({ correct: verdict.correct, confidence: item.confidence });
-    item.elapsedMs = Math.max(0, Date.now() - item.enteredAt);
-    item.ts = CQP.isoNow();
-    item.submitted = true;
-    item.bookHadEntry = Object.prototype.hasOwnProperty.call(S.store.wrongbook, question.id);
-    item.bookBefore = item.bookHadEntry ? cloneBookEntry(S.store.wrongbook[question.id]) : null;
-    item.bookWritten = false;
-    item.bookAfter = null;
-    writeItemRecord(P.idx);
-    render();
+    item.submitting = true;
+    // 判分在服务端：题库下发时已剥掉答案，本地拿不到标准答案
+    api("/api/practice/grade", {
+      method: "POST",
+      body: { bankSlug: S.bankSlug, qid: question.id, myAnswer: myAnswer },
+    })
+      .then(function (data) {
+        item.submitting = false;
+        if (!data || data.reason === "no_question") {
+          toast("题目已变更，请刷新后重试");
+          return;
+        }
+        S.answers.set(question.id, {
+          qid: question.id,
+          answer: data.answer || [],
+          answerText: data.answerText,
+          explanation: data.explanation,
+          responseMode: data.responseMode,
+          answerStatus: "ok",
+          needsReview: false,
+        });
+        question.answer = data.answer || [];
+        question.explanation = data.explanation;
+        item.myAnswer = myAnswer;
+        item.correct = !!data.correct;
+        item.confidence = "confident";
+        item.color = CQP.color({ correct: item.correct, confidence: item.confidence });
+        item.elapsedMs = Math.max(0, Date.now() - item.enteredAt);
+        item.ts = CQP.isoNow();
+        item.submitted = true;
+        item.bookHadEntry = Object.prototype.hasOwnProperty.call(S.store.wrongbook, question.id);
+        item.bookBefore = item.bookHadEntry ? cloneBookEntry(S.store.wrongbook[question.id]) : null;
+        item.bookWritten = false;
+        item.bookAfter = null;
+        writeItemRecord(P.idx);
+        render();
+      })
+      .catch(function (err) {
+        item.submitting = false;
+        toast(failure(err, "提交失败，请重试"));
+        render();
+      });
   }
 
   function setConfidence(conf) {
@@ -1165,13 +1555,49 @@
   }
 
   // ------------------------------------------------------------ 团队对比 P6
+  /**
+   * 团队对比改成拉服务端汇总：团队成员是「这台服务器上所有账号」，不再是
+   * 「本机昵称 + 导入文件里的昵称」。导出/导入仍然保留，用于跨服务器搬数据。
+   */
+  function teamState() {
+    if (!S.team) S.team = { loading: false, data: null, error: "" };
+    return S.team;
+  }
+
+  function loadTeam(force) {
+    var T = teamState();
+    if (T.loading) return null;
+    if (T.data && !force) return null;
+    T.loading = true;
+    T.error = "";
+    return api("/api/team/summary?bank=" + encodeURIComponent(S.bankSlug))
+      .then(function (data) {
+        T.data = data;
+      })
+      .catch(function (err) {
+        T.error = failure(err, "取团队统计失败");
+      })
+      .then(function () {
+        T.loading = false;
+        render();
+      });
+  }
+
   function renderTeam() {
-    var team = CQP.teamStats({ records: S.store.records, questions: S.bank.questions, sessions: S.store.sessions });
-    var importedCount = S.store.imports.length;
+    var T = teamState();
+    if (loadTeam(false)) {
+      return '<div class="card"><h1>团队对比</h1><div class="muted mt8">正在汇总服务器上各账号的学习数据…</div></div>';
+    }
+    if (T.error) {
+      return '<div class="card"><h1>团队对比</h1><div class="banner error mt8">' + esc(T.error) +
+        '</div><div class="row mt12"><button class="primary" data-act="team-reload">重试</button></div></div>';
+    }
+    var data = T.data || { users: [], team: null, questionCount: 0, userCount: 0 };
+    var team = data.team || { nicknames: [], members: [], teamWrongQuestions: [], matrix: [], totalRecords: 0, teamMastery: { index: null, insufficient: true } };
     var targetNick = S.teamNick && team.nicknames.indexOf(S.teamNick) >= 0 ? S.teamNick : nick();
     var personal = CQP.personalStats({ records: S.store.records, questions: S.bank.questions, nickname: targetNick, sessions: S.store.sessions });
 
-    var memberRows = team.members.map(function (member) {
+    var memberRows = (team.members || []).map(function (member) {
       return "<tr><td>" + esc(member.nickname) + (member.nickname === nick() ? ' <span class="badge blue">我</span>' : "") + "</td>" +
         '<td class="num">' + member.answered + "</td>" +
         '<td class="num">' + member.correct + "</td>" +
@@ -1181,7 +1607,7 @@
         '<td class="num">' + (member.mockBest === null ? "—" : member.mockBest + " 分（" + member.mockCount + " 次）") + "</td></tr>";
     });
 
-    var teamRows = team.teamWrongQuestions.slice(0, 200).map(function (row) {
+    var teamRows = (team.teamWrongQuestions || []).slice(0, 200).map(function (row) {
       return "<tr><td>" + esc(trim(row.question ? row.question.stem : row.qid, 70)) + '<div class="muted mono">' + esc(row.qid) + "</div></td>" +
         '<td class="num">' + row.wrongUsers + "</td>" +
         '<td class="num">' + row.wrongCount + "</td>" +
@@ -1197,7 +1623,7 @@
     });
 
     var matrix = "";
-    if (team.matrix.length > 0) {
+    if (team.matrix && team.matrix.length > 0) {
       matrix = '<div class="card"><h2>交叉矩阵（团队易错题 × 成员）</h2><div class="table-wrap" style="max-height:320px"><table><thead><tr><th>题目</th>' +
         team.nicknames.map(function (name) { return "<th>" + esc(name) + "</th>"; }).join("") + "</tr></thead><tbody>" +
         team.matrix.slice(0, 100).map(function (row) {
@@ -1208,9 +1634,10 @@
 
     var emptyTeam = team.nicknames.length <= 1 || team.teamWrongQuestions.length === 0;
     return (
-      '<div class="card"><h1>团队对比</h1><div class="row between"><div class="muted">团队 = 本机昵称 + 所有已导入文件中的昵称（同一昵称合并统计）；已导入 ' +
-      importedCount + " 次文件。团队易错题 = 答错该题的不同昵称数 ≥ " + CQP.WRONG_THRESHOLD_USERS + "（按答错人数降序）。</div>" +
-      '<div class="row"><button class="primary" data-act="go" data-page="io">导入队友 JSON</button>' +
+      '<div class="card"><h1>团队对比</h1><div class="row between"><div class="muted">团队 = 本服务器上全部账号（同一账号的多次作答合并统计）；当前题库 ' +
+      data.questionCount + " 题、共 " + data.userCount + " 个账号。团队易错题 = 答错该题的不同账号数 ≥ " + CQP.WRONG_THRESHOLD_USERS + "（按答错人数降序）。</div>" +
+      '<div class="row"><button class="primary" data-act="team-reload">刷新汇总</button>' +
+      '<button data-act="go" data-page="io">导出 / 导入备份</button>' +
       (team.nicknames.length > 1 ? '<label class="inline">个人易错题对象 <select data-act="team-nick">' + team.nicknames.map(function (name) { return option(name, name, targetNick); }).join("") + "</select></label>" : "") +
       "</div></div>" +
       '<div class="kv mt12"><div class="item"><div class="k">团队成员数</div><div class="v">' + team.nicknames.length + "</div></div>" +
@@ -1218,9 +1645,9 @@
       '<div class="item"><div class="k">团队易错题</div><div class="v">' + team.teamWrongQuestions.length + "</div></div>" +
       '<div class="item"><div class="k">团队掌握指数</div><div class="v small">' + masteryText(team.teamMastery.index, team.teamMastery.insufficient) + "</div></div></div></div>" +
 
-      (emptyTeam ? '<div class="card"><div class="muted">还没有可对比的队友数据：请先在「导出/导入」页导入队友导出的 JSON 文件（先导入队友的 JSON）。</div></div>' : "") +
+      (emptyTeam ? '<div class="card"><div class="muted">还没有可对比的队友数据：等其他账号开始答题后再回来刷新。</div></div>' : "") +
 
-      '<div class="card"><h2>成员对比</h2><div class="table-wrap"><table><thead><tr><th>昵称</th><th class="num">作答</th><th class="num">正确</th><th class="num">正确率</th><th class="num">掌握指数</th><th class="num">个人易错题</th><th class="num">模拟赛最高分</th></tr></thead><tbody>' +
+      '<div class="card"><h2>成员对比</h2><div class="table-wrap"><table><thead><tr><th>账号昵称</th><th class="num">作答</th><th class="num">正确</th><th class="num">正确率</th><th class="num">掌握指数</th><th class="num">个人易错题</th><th class="num">模拟赛最高分</th></tr></thead><tbody>' +
       (memberRows.length ? memberRows.join("") : '<tr><td colspan="7" class="muted">暂无成员</td></tr>') + "</tbody></table></div></div>" +
 
       '<div class="card"><h2>团队易错题（≥' + CQP.WRONG_THRESHOLD_USERS + ' 人答错）</h2><div class="table-wrap"><table><thead><tr><th>题目</th><th class="num">答错人数</th><th class="num">答错次数</th><th class="num">错误率</th><th class="num">团队掌握指数</th><th>答错成员</th></tr></thead><tbody>' +
@@ -1259,36 +1686,40 @@
       fileName = err instanceof RangeError ? RANGE_TEXT : "（请检查日期）";
     }
 
-    // t41 F-03：只读抢救模式提示卡——文案与行为一致（不写盘、不清空、导出读磁盘原始数据）
+    // 服务器版：数据在服务端，不存在只读抢救态
     var blockedHtml = "";
-    if (S.storageBlocked) {
-      var snapshot = rescuePayload();
-      blockedHtml = '<div class="card"><h2>只读抢救模式（不会写入任何数据）</h2>' +
-        "<div class=\"muted\">检测到 " + esc(blockedReasonText()) + "。程序已切换为只读：<b>本次运行不会写入任何数据</b>，也不会清空，你的数据仍保存在浏览器中。下面的导出按钮会<b>直接读取浏览器里的原始数据</b>（不再从内存取数），请先用它把数据抢救出来。</div>" +
-        '<div class="kv mt8">' +
-        '<div class="item"><div class="k">磁盘上的昵称</div><div class="v small">' + esc(snapshot.exportedBy.nickname) + "</div></div>" +
-        '<div class="item"><div class="k">磁盘上的作答记录</div><div class="v small">' + snapshot.counts.records + " 条</div></div>" +
-        '<div class="item"><div class="k">磁盘上的模拟赛</div><div class="v small">' + snapshot.counts.sessions + " 场</div></div>" +
-        '<div class="item"><div class="k">纠错覆盖层</div><div class="v small">' + snapshot.counts.overrides + " 条</div></div>" +
-        '<div class="item"><div class="k">检测到的数据版本</div><div class="v small">' + esc(snapshot.schemaVersion) + "</div></div>" +
-        "</div>" +
-        (snapshot.rescue.unparsableKeys.length
-          ? '<div class="result-box yellow mt8">有 ' + snapshot.rescue.unparsableKeys.length + " 处内容无法解析为 JSON（" + esc(snapshot.rescue.unparsableKeys.join("、")) + "）：导出文件会把它们的<b>原始字符串</b>一并保存，便于手工抢救。</div>"
-          : "") +
-        '<div class="row mt12"><button class="primary" data-act="export-backup">导出抢救备份（读取原始数据）</button>' +
-        '<button data-act="export">按范围导出（同样读取原始数据）</button></div></div>';
-    }
 
     var reportHtml = "";
     if (io.report) {
+      // 服务端合并报告的字段与 CQP.mergeImport 的报告不同，统一按「可能是数字也可能是数组」读
       var report = io.report;
-      var duplicateTotal = report.duplicates + report.duplicatesInFile;
-      var detailText = "跳过 " + report.skipped.length + " 条，补正 " + report.repaired.length + " 条；覆盖层应用 " + report.overridesApplied + " 条（保留本地 " + report.overridesKept +
-        " 条）；模拟赛 " + report.sessionsImported + " 场；涉及昵称：" + esc(report.nicknames.join("、") || "—") +
-        (report.unknownQids.length ? "；未知题号 " + report.unknownQids.length + " 条（未入库）" : "");
-      reportHtml = report.importedRecords === 0
+      var numberOf = function (value) {
+        if (typeof value === "number") return value;
+        if (Array.isArray(value)) return value.length;
+        return 0;
+      };
+      var duplicateTotal = numberOf(report.duplicates) + numberOf(report.duplicatesInFile);
+      var parts = [];
+      var skipped = numberOf(report.skipped);
+      if (skipped) parts.push("跳过 " + skipped + " 条");
+      var repaired = numberOf(report.repaired);
+      if (repaired) parts.push("补正 " + repaired + " 条");
+      var overrides = numberOf(report.overridesApplied);
+      if (overrides) parts.push("覆盖层应用 " + overrides + " 条");
+      var sessions = numberOf(report.sessionsImported);
+      if (sessions) parts.push("模拟赛 " + sessions + " 场");
+      var wbAdded = numberOf(report.wrongbookAdded);
+      if (wbAdded) parts.push("错题本 +" + wbAdded);
+      var unknown = numberOf(report.unknownQids);
+      if (unknown) parts.push("未知题号 " + unknown + " 条（未入库）");
+      if (report.versionMismatch) parts.push("题库版本不一致（记录仍保留）");
+      if (Array.isArray(report.nicknames) && report.nicknames.length) {
+        parts.push("涉及昵称：" + esc(report.nicknames.join("、")));
+      }
+      var detailText = parts.join("；") || "没有需要合并的新内容。";
+      reportHtml = numberOf(report.importedRecords) === 0
         ? '<div class="result-box yellow mt12"><b>' + IMPORT_NO_NEW_PREFIX + duplicateTotal + " 条为重复记录（未重复计数）</b><br>" + detailText + "</div>"
-        : '<div class="result-box green mt12"><b>导入完成</b>：新增 ' + report.importedRecords + " 条，重复 " + duplicateTotal + " 条，" + detailText + "</div>";
+        : '<div class="result-box green mt12"><b>导入完成</b>：新增 ' + numberOf(report.importedRecords) + " 条，重复 " + duplicateTotal + " 条；" + detailText + "</div>";
     } else if (io.pending) {
       var pending = io.pending;
       reportHtml = '<div class="result-box ' + (pending.ok ? "green" : "red") + ' mt12">' +
@@ -1316,15 +1747,13 @@
       '<input type="date" data-act="io-date" data-key="to" value="' + esc(io.to) + '">' +
       '<label class="inline"><input type="radio" name="ioScope" data-act="io-scope" value="all"' + (scope === "all" ? " checked" : "") + "> 全部</label>" +
       '<button class="primary" data-act="export"' + (preview ? "" : " disabled") + ">导出</button></div>" +
-      '<div class="muted mt8">文件名：<span class="mono">' + esc(S.storageBlocked ? rescueFileName() : fileName) + "</span>；" +
-      (S.storageBlocked
-        ? "抢救模式：将导出浏览器里的 " + rescuePayload().counts.records + " 条作答记录（原样读取，不按日期裁剪）。"
-        : previewError ? '<span class="badge red">' + esc(previewError) + "</span>" : "本次将导出 " + preview.counts.records + " 条作答记录、" + preview.counts.sessions + " 场模拟赛、覆盖层 " + preview.counts.overrides + " 条（覆盖层整体导出，不按日期裁剪）。") +
+      '<div class="muted mt8">文件名：<span class="mono">' + esc(fileName) + "</span>；" +
+      (previewError ? '<span class="badge red">' + esc(previewError) + "</span>" : "本次将导出 " + preview.counts.records + " 条作答记录、" + preview.counts.sessions + " 场模拟赛、覆盖层 " + preview.counts.overrides + " 条（覆盖层整体导出，不按日期裁剪）。") +
       "</div></div>" +
 
       '<div class="card"><h2>导入队友记录</h2><div class="row">' +
       '<input type="file" id="importFile" data-act="importFile" accept=".json,application/json">' +
-      '<span class="muted">重复导入不会重复计数（按 昵称+题号+时间戳 去重）。</span></div>' + reportHtml + "</div>" +
+      '<span class="muted">服务端合并：重复导入不会重复计数（按 昵称+题号+时间戳 去重），错题本按最后修改时间取新。</span></div>' + reportHtml + "</div>" +
 
       '<div class="card"><h2>导入历史</h2><div class="table-wrap" style="max-height:260px"><table><thead><tr><th>文件</th><th>时间</th><th>昵称</th><th class="num">新增</th><th class="num">重复</th><th class="num">跳过</th></tr></thead><tbody>' +
       (ledger.length ? ledger.join("") : '<tr><td colspan="6" class="muted">暂无导入记录</td></tr>') + "</tbody></table></div></div>"
@@ -1349,28 +1778,31 @@
   function confirmImport() {
     var pending = S.io.pending;
     if (!pending || !pending.ok) return;
-    var merged = CQP.mergeImport({
-      store: S.store,
-      payload: pending.payload,
-      questions: S.bank.questions,
-      bankVersion: bankVersion(),
-      fileName: pending.fileName,
-      nowISO: CQP.isoNow(),
+    // 服务端合并：records / overrides / sessions 走 CQP.mergeImport 去重，
+    // wrongbook 由 server/store-doc.js 的 mergeExportInto 单独 LWW 合并
+    // （CQP.mergeImport 完全不碰 wrongbook，本地合并会把它整块丢掉）。
+    api("/api/store/import", {
+      method: "POST",
+      body: { bankSlug: S.bankSlug, payload: pending.payload, fileName: pending.fileName },
+    }).then(function (data) {
+      S.rev = data.rev;
+      S.store = data.store;
+      CQP.setStore(S.store);
+      refreshBank();
+      S.io.report = data.report;
+      S.io.pending = null;
+      render();
+      var report = data.report || {};
+      var duplicateTotal = (report.duplicates || 0);
+      var extra = (report.wrongbookAdded || 0) > 0 ? "，错题本 +" + report.wrongbookAdded : "";
+      toast(
+        (report.importedRecords || 0) === 0
+          ? IMPORT_NO_NEW_PREFIX + duplicateTotal + " 条为重复记录（未重复计数）" + extra
+          : "导入完成：新增 " + report.importedRecords + " 条记录" + extra
+      );
+    }).catch(function (err) {
+      toast(failure(err, "导入失败"));
     });
-    S.store = merged.store;
-    // 先同步内存态再刷新派生数据：否则 refreshBank() 会按旧 store 计算生效题库（覆盖层不生效）
-    CQP.setStore(S.store);
-    refreshBank();
-    S.io.report = merged.report;
-    S.io.pending = null;
-    persist();
-    render();
-    var duplicateTotal = merged.report.duplicates + merged.report.duplicatesInFile;
-    toast(
-      merged.report.importedRecords === 0
-        ? IMPORT_NO_NEW_PREFIX + duplicateTotal + " 条为重复记录（未重复计数）"
-        : "导入完成：新增 " + merged.report.importedRecords + " 条记录"
-    );
   }
 
   // ------------------------------------------------------------ 模拟赛 P8
@@ -1389,6 +1821,11 @@
         enteredAt: 0,
         session: null,
         bookSnapshot: {},
+        starting: false,
+        submitting: false,
+        resuming: false,
+        savingResponses: false,
+        saveResponsesAgain: false,
       };
     }
     return S.mock;
@@ -1398,6 +1835,10 @@
     if (S.mockTimer) {
       window.clearInterval(S.mockTimer);
       S.mockTimer = null;
+    }
+    if (S.mockSaveTimer) {
+      window.clearTimeout(S.mockSaveTimer);
+      S.mockSaveTimer = null;
     }
   }
 
@@ -1433,26 +1874,90 @@
     mockTick(M); // 立即同步一次（若冻结期间已超过限额，这里就会按原限额自动交卷）
   }
 
-  function startMock() {
+  // 出卷在服务端：题库下发时已剥掉答案，抽题分布与倒计时口径都以服务端返回为准。
+  async function startMock() {
     var M = mockState();
-    var paper = CQP.buildMockPaper({ bank: S.bank, nowISO: CQP.isoNow() });
-    M.paper = paper;
-    M.phase = "running";
-    M.responses = {};
-    M.idx = 0;
-    M.marked = {};
-    M.limitSec = paper.timeLimitSec; // 不可变基准：倒计时只从它扣
-    M.remaining = paper.timeLimitSec; // 派生值：每次 tick 由 limitSec - 已过整秒 重算
-    M.startedAt = Date.now();
-    M.session = null;
-    M.enteredAt = Date.now();
-    M.bookSnapshot = {};
-    paper.questionIds.forEach(function (qid) {
-      M.responses[qid] = { myAnswer: [], confidence: "confident", elapsedMs: 0 };
-    });
-    stopMockTimer();
-    ensureMockTimer();
-    render();
+    if (M.starting) return;
+    M.starting = true;
+    try {
+      var data = await api("/api/mock/start", { method: "POST", body: { bankSlug: S.bankSlug } });
+      var exam = data.exam;
+      M.paper = {
+        sessionId: exam.id,
+        questionIds: exam.questionIds.slice(),
+        timeLimitSec: exam.planSec,
+        totalScore: CQP.MOCK_LIMITS.totalScore,
+        perQuestionScore: CQP.MOCK_LIMITS.perQuestionScore,
+        startedAt: exam.startedAt,
+        distribution: data.distribution || null,
+      };
+      M.phase = "running";
+      M.responses = {};
+      M.idx = 0;
+      M.marked = {};
+      M.limitSec = exam.planSec; // 不可变基准：倒计时只从它扣
+      M.remaining = exam.planSec;
+      // 用服务端 startedAt 还原真实进度：刷新/换设备接着考不会把时间清零。
+      M.startedAt = Date.parse(exam.startedAt);
+      if (!Number.isFinite(M.startedAt)) M.startedAt = Date.now();
+      M.session = null;
+      M.enteredAt = Date.now();
+      M.bookSnapshot = {};
+      M.paper.questionIds.forEach(function (qid) {
+        var saved = exam.responses ? exam.responses[qid] : null;
+        M.responses[qid] = {
+          myAnswer: saved && Array.isArray(saved.myAnswer) ? saved.myAnswer.slice() : [],
+          confidence: (saved && saved.confidence) || "confident",
+          elapsedMs: saved && Number.isFinite(saved.elapsedMs) ? saved.elapsedMs : 0,
+        };
+      });
+      stopMockTimer();
+      ensureMockTimer();
+      if (data.resumed) toast("已接着上次未交的卷继续");
+      render();
+    } catch (err) {
+      toast(failure(err, "出卷失败，请稍后重试"));
+    } finally {
+      M.starting = false;
+    }
+  }
+
+  // 作答先落内存，再防抖推服务端：刷新/换设备后能从服务端把整份作答取回来。
+  function queueMockSave() {
+    var M = S.mock;
+    if (!M || M.phase !== "running" || !M.paper) return;
+    if (S.mockSaveTimer) window.clearTimeout(S.mockSaveTimer);
+    S.mockSaveTimer = window.setTimeout(function () {
+      S.mockSaveTimer = null;
+      saveMockResponses();
+    }, 800);
+  }
+
+  function saveMockResponses() {
+    var M = S.mock;
+    if (!M || M.phase !== "running" || !M.paper) return Promise.resolve(null);
+    if (M.savingResponses) {
+      M.saveResponsesAgain = true;
+      return Promise.resolve(null);
+    }
+    M.savingResponses = true;
+    var examId = M.paper.sessionId;
+    return api("/api/mock/" + encodeURIComponent(examId) + "/responses", {
+      method: "PUT",
+      body: { responses: M.responses },
+    })
+      .catch(function () {
+        // 暂存失败不影响本地作答：交卷时会把整份 responses 一起提交，不会丢答案。
+        return null;
+      })
+      .then(function (result) {
+        M.savingResponses = false;
+        if (M.saveResponsesAgain) {
+          M.saveResponsesAgain = false;
+          return saveMockResponses();
+        }
+        return result;
+      });
   }
 
   function collectMockAnswer(question, silent) {
@@ -1468,7 +1973,58 @@
       for (var i = 0; i < nodes.length; i += 1) picked.push(nodes[i].value);
       response.myAnswer = picked;
     }
+    queueMockSave();
     if (!silent) render();
+  }
+
+  // 刷新/换设备后接着考：服务端还挂着 running 场次时，直接恢复到考场。
+  async function resumeMock() {
+    var M = mockState();
+    if (M.phase === "running" || M.resuming) return null;
+    M.resuming = true;
+    try {
+      var data = await api("/api/mock/current?bank=" + encodeURIComponent(S.bankSlug));
+      var exam = data && data.exam;
+      if (!exam) return null;
+      M.paper = {
+        sessionId: exam.id,
+        questionIds: exam.questionIds.slice(),
+        timeLimitSec: exam.planSec,
+        totalScore: CQP.MOCK_LIMITS.totalScore,
+        perQuestionScore: CQP.MOCK_LIMITS.perQuestionScore,
+        startedAt: exam.startedAt,
+        distribution: null,
+      };
+      M.phase = "running";
+      M.responses = {};
+      M.idx = 0;
+      M.marked = {};
+      M.limitSec = exam.planSec;
+      M.remaining = exam.planSec;
+      M.startedAt = Date.parse(exam.startedAt);
+      if (!Number.isFinite(M.startedAt)) M.startedAt = Date.now();
+      M.session = null;
+      M.enteredAt = Date.now();
+      M.bookSnapshot = {};
+      var answeredAt = -1;
+      M.paper.questionIds.forEach(function (qid, index) {
+        var saved = exam.responses ? exam.responses[qid] : null;
+        M.responses[qid] = {
+          myAnswer: saved && Array.isArray(saved.myAnswer) ? saved.myAnswer.slice() : [],
+          confidence: (saved && saved.confidence) || "confident",
+          elapsedMs: saved && Number.isFinite(saved.elapsedMs) ? saved.elapsedMs : 0,
+        };
+        if (M.responses[qid].myAnswer.length > 0) answeredAt = index;
+      });
+      if (answeredAt >= 0) M.idx = answeredAt;
+      stopMockTimer();
+      ensureMockTimer();
+      return exam;
+    } catch (err) {
+      return null;
+    } finally {
+      M.resuming = false;
+    }
   }
 
   function mockGoto(index, silent) {
@@ -1477,6 +2033,13 @@
     M.responses[current].elapsedMs += Math.max(0, Date.now() - M.enteredAt);
     M.enteredAt = Date.now();
     M.idx = Math.max(0, Math.min(index, M.paper.questionIds.length - 1));
+    // 切题是天然分界点：立刻把作答推服务端，别等防抖（否则快速切题时永远等不到一次保存，
+    // 刷新后服务端手里是空的，续考会丢已答内容）。
+    if (S.mockSaveTimer) {
+      window.clearTimeout(S.mockSaveTimer);
+      S.mockSaveTimer = null;
+    }
+    saveMockResponses();
     if (!silent) render();
   }
 
@@ -1507,40 +2070,61 @@
     return written;
   }
 
-  function abandonMock() {
+  async function abandonMock() {
     var M = mockState();
     if (M.phase !== "running") return;
-    flushMockRecords(null);
+    var examId = M.paper ? M.paper.sessionId : null;
     stopMockTimer();
+    flushMockRecords(null);
     M.phase = "setup";
     M.paper = null;
     M.responses = {};
     M.bookSnapshot = {};
     toast("已退出模拟赛：本次成绩作废，已答题目保留为作答记录");
+    render();
+    if (examId) {
+      try {
+        await api("/api/mock/" + encodeURIComponent(examId) + "/abandon", { method: "POST", body: {} });
+      } catch (err) {
+        // 放弃失败不影响本地已退出：下次开局时服务端会把这张卷当成 running 复用，
+        // 用户能接着考，不会丢数据。
+      }
+    }
   }
 
-  function submitMock(auto) {
+  // 判分在服务端：submit 返回逐题标准答案，回填到题目上之后
+  // 本地的错题本/记录逻辑（makeRecord 要读 question.answer）才能照原样跑。
+  async function submitMock(auto) {
     var M = mockState();
-    if (M.phase !== "running") return;
+    if (M.phase !== "running" || M.submitting) return;
     var currentQid = M.paper.questionIds[M.idx];
-    M.responses[currentQid].elapsedMs += Math.max(0, Date.now() - M.enteredAt);
+    if (M.responses[currentQid]) {
+      M.responses[currentQid].elapsedMs += Math.max(0, Date.now() - M.enteredAt);
+    }
     collectMockAnswer(S.qById.get(currentQid), true);
-    var session = CQP.gradeMock({
-      paper: M.paper,
-      responses: M.responses,
-      bank: S.bank,
-      submittedAtISO: CQP.isoNow(),
-      autoSubmitted: !!auto,
-      nickname: nick(),
-    });
-    CQP.appendSession(S.store, session);
-    M.session = session;
-    M.phase = "result";
+    M.submitting = true;
     stopMockTimer();
-    flushMockRecords(session.sessionId);
-    persist();
-    render();
-    if (auto) infoBox("时间到，已自动交卷", "<p>系统按你提交时（60 分钟到点）的作答情况计分。</p>");
+    try {
+      var data = await api("/api/mock/" + encodeURIComponent(M.paper.sessionId) + "/submit", {
+        method: "POST",
+        body: { responses: M.responses, nickname: nick(), autoSubmitted: !!auto },
+      });
+      absorbAnswerMap(data.answers);
+      applyAnswers(questionsOf(M.paper.questionIds));
+      M.session = data.session;
+      M.phase = "result";
+      flushMockRecords(data.session.sessionId);
+      persist();
+      render();
+      if (data.autoSubmitted) infoBox("时间到，已自动交卷", "<p>系统按交卷时刻的作答情况计分。</p>");
+    } catch (err) {
+      M.phase = "running";
+      ensureMockTimer();
+      render();
+      toast(failure(err, "交卷失败，请重试"));
+    } finally {
+      M.submitting = false;
+    }
   }
 
   // 规格 13.2 + 队长 t12 裁决：交卷后可在成绩页「逐题」改信心。
@@ -1661,6 +2245,12 @@
     if (M.phase === "result") {
       var session = M.session;
       var result = session.result;
+      // 成绩页要显示每题的标准答案；交卷时服务端已随响应返回，但刷新后回来要重新取
+      var resultQuestions = questionsOf(session.questionIds);
+      if (ensureAnswersFor(resultQuestions, false)) {
+        return '<div class="card"><h1>正在取回本场答案</h1><div class="muted mt8">正在向服务端取 ' +
+          resultQuestions.length + " 道题的标准答案，取回后自动显示成绩…</div></div>";
+      }
       var typeRows = CQP.MOCK_TYPE_ORDER.map(function (type) {
         var row = result.byType[type];
         return "<tr><td>" + esc(CQP.TYPE_NAMES[type]) + '</td><td class="num">' + row.score + " / " + row.total + '</td><td class="num">' +
@@ -1792,6 +2382,11 @@
       return true;
     });
     var shown = list.slice(0, S.reviewLimit);
+    // 校对页要显示「题库原答案」，而服务端下发的题库里没有答案；按需拉一次（拉过就不再重复）
+    if (ensureAnswersFor(shown, true)) {
+      return '<div class="card"><h1>校对 / 纠错</h1><div class="muted mt8">正在向服务端取这 ' +
+        shown.length + " 道题的标准答案…</div></div>";
+    }
 
     var rows = shown.map(function (question) {
       var mode = CQP.responseModeOf(question);
@@ -1894,7 +2489,8 @@
     var main = $("main");
     var html = "";
     if (!S.bank) {
-      html = '<div class="card"><h1>无法启动</h1><p>内嵌题库缺失或损坏。</p></div>';
+      html = '<div class="card"><h1>题库尚未加载</h1><p class="muted mt8">服务端题库没能拉到，请刷新页面；若持续失败请联系管理员检查题库导入情况。</p>' +
+        '<div class="row mt12"><button class="primary" data-act="reload">重新加载</button></div></div>';
       main.innerHTML = html;
       return;
     }
@@ -1909,10 +2505,21 @@
       case "io": html = renderIO(); break;
       case "mock": html = renderMock(); break;
       case "review": html = renderReview(); break;
+      case "admin": html = renderAdmin(); break;
       default: html = renderHome(); break;
     }
     main.innerHTML = html;
-    $("whoami").textContent = (S.store.meta.nickname || "未命名") + " ｜ 在册错题 " + CQP.wrongbookCountActive(S.store.wrongbook) + " ｜ 记录 " + S.store.records.length;
+    if (S.user) {
+      $("whoami").innerHTML =
+        '<button class="whoamibtn" data-act="account" title="账号设置">' + esc(nick()) +
+        '<span class="whoamimeta">在册错题 ' + CQP.wrongbookCountActive(S.store.wrongbook) +
+        " ｜ 记录 " + S.store.records.length + "</span></button>";
+    } else {
+      $("whoami").textContent = "";
+    }
+    renderBankSwitcher();
+    var adminNav = $("navAdmin");
+    if (adminNav) adminNav.className = S.user && S.user.role === "admin" ? "" : "hidden";
     var navButtons = document.querySelectorAll("#nav button");
     for (var i = 0; i < navButtons.length; i += 1) {
       var target = navButtons[i].getAttribute("data-nav");
@@ -1925,9 +2532,205 @@
     }
   }
 
+  /** 顶部题库切换器：题库决定题号空间，切换等于换一整套学习数据 */
+  function renderBankSwitcher() {
+    var host = $("bankSwitch");
+    if (!host) return;
+    if (!S.banks || S.banks.length <= 1) { host.innerHTML = ""; return; }
+    var options = S.banks.map(function (bank) {
+      return '<option value="' + esc(bank.slug) + '"' + (bank.slug === S.bankSlug ? " selected" : "") + ">" +
+        esc(bank.title) + "（" + bank.questionCount + " 题）</option>";
+    }).join("");
+    host.innerHTML = '<label class="bankswitch"><span class="muted">题库</span>' +
+      '<select data-act="bank-switch">' + options + "</select></label>";
+  }
+
+  // ------------------------------------------------------------ 管理后台
+
+  function adminState() {
+    if (!S.admin) S.admin = { loading: false, error: "", users: null, banks: null, audit: null };
+    return S.admin;
+  }
+
+  /** 拉一次管理数据（只对 admin 有意义） */
+  function loadAdmin(force) {
+    if (!S.user || S.user.role !== "admin") return null;
+    var A = adminState();
+    if (A.loading) return true;
+    if (A.users && A.banks && !force) return null;
+    A.loading = true;
+    A.error = "";
+    Promise.all([
+      api("/api/admin/users"),
+      api("/api/admin/banks"),
+      api("/api/admin/audit?limit=40"),
+    ]).then(function (res) {
+      A.users = res[0].users;
+      A.banks = res[1].banks;
+      A.audit = res[2].items;
+    }).catch(function (err) {
+      A.error = failure(err, "管理数据加载失败");
+    }).then(function () {
+      A.loading = false;
+      render();
+    });
+    return true;
+  }
+
+  function renderAdmin() {
+    if (!S.user || S.user.role !== "admin") {
+      return '<div class="card"><h1>管理后台</h1><p class="muted mt8">只有管理员可以进入这里。</p></div>';
+    }
+    if (loadAdmin(false)) {
+      return '<div class="card"><h1>管理后台</h1><p class="muted mt8">正在读取管理数据…</p></div>';
+    }
+    var A = adminState();
+    if (A.error) {
+      return '<div class="card"><h1>管理后台</h1>' +
+        '<div class="result-box red mt12">' + esc(A.error) + "</div>" +
+        '<div class="row mt12"><button class="primary" data-act="admin-reload">重试</button></div></div>';
+    }
+
+    var users = A.users || [];
+    var userRows = users.map(function (u) {
+      var badge = u.role === "admin" ? '<span class="badge blue">管理员</span>' : '<span class="badge">普通</span>';
+      if (u.disabled) badge += ' <span class="badge red">已停用</span>';
+      var self = S.user && u.id === S.user.id;
+      var ops = [];
+      if (!self) {
+        ops.push(u.disabled
+          ? '<button data-act="admin-user-enable" data-id="' + u.id + '">启用</button>'
+          : '<button data-act="admin-user-disable" data-id="' + u.id + '">停用</button>');
+        ops.push('<button data-act="admin-user-role" data-id="' + u.id + '" data-role="' +
+          (u.role === "admin" ? "user" : "admin") + '">' +
+          (u.role === "admin" ? "降为普通" : "设为管理员") + "</button>");
+      }
+      ops.push('<button data-act="admin-user-pass" data-id="' + u.id + '" data-name="' +
+        esc(u.username) + '">重置密码</button>');
+      return "<tr><td>" + esc(u.username) + (self ? ' <span class="muted">（我）</span>' : "") + "</td>" +
+        "<td>" + esc(u.displayName) + "</td><td>" + badge + "</td>" +
+        '<td class="num">' + u.records + '</td><td class="num">' + u.wrongbookActive + "</td>" +
+        '<td class="muted">' + esc(u.lastLoginAt || "—") + "</td>" +
+        '<td><div class="row row-ops">' + ops.join("") + "</div></td></tr>";
+    }).join("");
+
+    var banks = A.banks || [];
+    var bankRows = banks.map(function (b) {
+      var canDelete = b.slug !== "builtin";
+      return "<tr><td><span class=\"mono\">" + esc(b.slug) + "</span></td><td>" + esc(b.title) + "</td>" +
+        '<td class="num">' + b.questionCount + "</td><td>" + esc(b.bankVersion || "") + "</td>" +
+        '<td class="muted">' + esc(b.updatedAt || "") + "</td>" +
+        "<td>" + (canDelete
+          ? '<button class="danger" data-act="admin-bank-delete" data-slug="' + esc(b.slug) + '">删除</button>'
+          : '<span class="muted">内置</span>') + "</td></tr>";
+    }).join("");
+
+    var audit = A.audit || [];
+    var auditRows = audit.map(function (a) {
+      return "<tr><td>" + esc(a.createdAt) + "</td><td>" + esc(a.username || "—") + "</td>" +
+        '<td class="mono">' + esc(a.action) + "</td><td>" + esc(a.detail) + "</td>" +
+        '<td class="muted mono">' + esc(a.ip || "") + "</td></tr>";
+    }).join("");
+
+    return '<div class="card"><h1>管理后台</h1>' +
+      '<p class="muted mt8">只有管理员能看到这一页。题库上传支持本项目的扁平 schema（' +
+      '<span class="mono">{slug,title,questions:[{qid,stem,type,options,answer,chapter,...}]}</span>），' +
+      "也支持内置题库那种冻结契约格式。</p>" +
+      '<div class="row mt12"><button class="primary" data-act="admin-reload">刷新</button>' +
+      '<label class="inline filelabel">上传题库<input type="file" data-act="admin-bank-upload" accept=".json,application/json"></label></div>' +
+      "</div>" +
+
+      '<div class="card"><h2>用户（' + users.length + '）</h2><div class="table-wrap"><table>' +
+      "<thead><tr><th>账号</th><th>显示名</th><th>角色</th><th class=\"num\">记录</th>" +
+      "<th class=\"num\">在册错题</th><th>最后登录</th><th>操作</th></tr></thead><tbody>" +
+      (userRows || '<tr><td colspan="7" class="muted">还没有用户</td></tr>') +
+      "</tbody></table></div></div>" +
+
+      '<div class="card"><h2>题库（' + banks.length + '）</h2><div class="table-wrap"><table>' +
+      '<thead><tr><th>slug</th><th>标题</th><th class="num">题数</th><th>版本</th><th>更新时间</th><th>操作</th></tr></thead><tbody>' +
+      (bankRows || '<tr><td colspan="6" class="muted">还没有题库</td></tr>') +
+      "</tbody></table></div></div>" +
+
+      '<div class="card"><h2>审计日志（最近 ' + audit.length + ' 条）</h2><div class="table-wrap" style="max-height:320px"><table>' +
+      "<thead><tr><th>时间</th><th>账号</th><th>动作</th><th>详情</th><th>IP</th></tr></thead><tbody>" +
+      (auditRows || '<tr><td colspan="5" class="muted">暂无记录</td></tr>') +
+      "</tbody></table></div></div>";
+  }
+
+  /** 上传题库：读文件 → POST /api/admin/banks */
+  function uploadBankFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch (err) {
+        toast("文件不是合法 JSON");
+        return;
+      }
+      api("/api/admin/banks", { method: "POST", body: parsed }).then(function (data) {
+        toast("题库已导入：" + data.bank.slug + "（" + data.bank.questionCount + " 题）");
+        loadAdmin(true);
+        loadBanks().then(function () { render(); });
+      }).catch(function (err) {
+        toast(failure(err, "题库导入失败"));
+      });
+    };
+    reader.onerror = function () { toast("文件读取失败"); };
+    reader.readAsText(file);
+  }
+
+  /** 管理员重置他人密码：弹窗输入新密码 */
+  function adminResetPassword(userId, username) {
+    openModal(
+      "<h3>重置密码：" + esc(username) + "</h3>" +
+      '<label class="field"><span>新密码（8–128 位）</span><input type="password" id="admPass" autocomplete="new-password"></label>' +
+      '<p class="muted">该账号在其他设备上的登录会立即失效。</p>' +
+      '<div class="actions"><button data-act="modal-close">取消</button>' +
+      '<button class="primary" data-act="admin-pass-ok" data-id="' + userId + '">确认重置</button></div>',
+      function (box) {
+        box.addEventListener("click", function (event) {
+          var target = event.target.closest("[data-act]");
+          if (!target) return;
+          var act = target.getAttribute("data-act");
+          if (act === "modal-close") { closeModal(); return; }
+          if (act !== "admin-pass-ok") return;
+          var value = box.querySelector("#admPass").value || "";
+          if (value.length < 8 || value.length > 128) { toast("新密码长度需为 8–128 位"); return; }
+          api("/api/admin/users/" + target.getAttribute("data-id") + "/password", {
+            method: "POST",
+            body: { newPassword: value },
+          }).then(function () {
+            closeModal();
+            infoBox("密码已重置", "<p>该账号需要用新密码重新登录。</p>");
+          }).catch(function (err) {
+            toast(failure(err, "重置失败"));
+          });
+        });
+      }
+    );
+  }
+
   function handleAction(act, el, event) {
     switch (act) {
       case "go": go(el.getAttribute("data-page")); break;
+      case "reload": window.location.reload(); break;
+      case "account": openAccount(); break;
+      case "logout": logout(); break;
+      case "auth-tab": {
+        S.authTab = el.getAttribute("data-tab") === "register" ? "register" : "login";
+        var tabs = document.querySelectorAll('[data-act="auth-tab"]');
+        for (var t = 0; t < tabs.length; t += 1) {
+          tabs[t].className = tabs[t].getAttribute("data-tab") === S.authTab ? "active" : "";
+        }
+        $("authNickField").hidden = S.authTab !== "register";
+        $("authSubmit").textContent = S.authTab === "register" ? "注册并开始" : "登录";
+        $("authPass").setAttribute("autocomplete", S.authTab === "register" ? "new-password" : "current-password");
+        $("authHint").textContent = S.authTab === "register"
+          ? "用户名 3–24 位，密码至少 8 位；昵称可留空，默认用用户名。"
+          : "用户名 3–24 位，密码至少 8 位。";
+        break;
+      }
       case "io-page": go("io"); break;
       case "nick-edit": changeNickname(); break;
       case "sel-tag-clear": S.sel.tags = []; render(); break;
@@ -2025,13 +2828,6 @@
       case "review-save": saveReview(el.getAttribute("data-qid")); break;
       case "review-reset": resetReview(el.getAttribute("data-qid")); break;
       case "export": {
-        // t41 F-03：阻断态导出必须能救命——改从磁盘原始数据组装，不再从空内存 store 取数
-        if (S.storageBlocked) {
-          var rescueDay = rescuePayload();
-          downloadText(rescueFileName(), JSON.stringify(rescueDay, null, 2));
-          toast("抢救模式：已导出浏览器里的原始数据（" + rescueDay.counts.records + " 条作答记录，本次未写入任何数据）");
-          break;
-        }
         var payload = CQP.exportPayload({
           store: S.store,
           scope: S.io.scope,
@@ -2046,12 +2842,6 @@
         break;
       }
       case "export-backup": {
-        if (S.storageBlocked) {
-          var rescueAll = rescuePayload();
-          downloadText(rescueFileName(), JSON.stringify(rescueAll, null, 2));
-          toast("抢救模式：已导出浏览器里的原始数据（" + rescueAll.counts.records + " 条作答记录，本次未写入任何数据）");
-          break;
-        }
         var all = CQP.exportPayload({ store: S.store, scope: "all", nickname: nick(), bankVersion: bankVersion(), nowISO: CQP.isoNow() });
         downloadText(CQP.exportFileName({ nickname: nick(), scope: "all" }), JSON.stringify(all, null, 2));
         toast("已导出全部备份（" + all.counts.records + " 条记录）");
@@ -2060,22 +2850,21 @@
       case "import-confirm": confirmImport(); break;
       case "import-cancel": S.io.pending = null; render(); break;
       case "clear-data": {
-        // t41 F-03：只读抢救模式下不得清空——那会毁掉用户正要抢救的数据
-        if (S.storageBlocked) {
-          infoBox("只读抢救模式", "<p>当前本地数据不可用（" + esc(blockedReasonText()) + "），程序处于只读抢救模式：<b>不会写入、也不会清空任何数据</b>。请先用「导出抢救备份」把浏览器里的原始数据保存出来。</p>");
-          break;
-        }
-        confirmBox("清空本地数据", "<p>将删除本机全部作答记录、错题本、覆盖层、模拟赛记录与导入台账（不可恢复）。建议先导出备份。</p>", function () {
+        confirmBox("清空学习数据", "<p>将删除本账号在<b>当前题库</b>下的全部作答记录、错题本、覆盖层、模拟赛记录与导入台账（不可恢复，其他题库不受影响）。建议先导出备份。</p>", function () {
           confirmBox("再次确认", "<p>确定要清空吗？此操作不可撤销。</p>", function () {
-            CQP.storage.reset();
-            CQP.resetMemoryStore();
-            S.store = CQP.emptyStore();
-            CQP.setStore(S.store);
-            refreshBank();
-            S.practice = null;
-            S.mock = null;
-            render();
-            toast("本地数据已清空");
+            api("/api/store?bank=" + encodeURIComponent(S.bankSlug), { method: "DELETE" })
+              .then(function (data) {
+                S.rev = data && typeof data.rev === "number" ? data.rev : S.rev + 1;
+                S.store = CQP.emptyStore();
+                if (S.user) S.store.meta.nickname = S.user.displayName || S.user.username;
+                CQP.setStore(S.store);
+                refreshBank();
+                S.practice = null;
+                S.mock = null;
+                render();
+                toast("学习数据已清空");
+              })
+              .catch(function (err) { toast(failure(err, "清空失败")); });
           }, "确定清空");
         }, "继续");
         break;
@@ -2110,18 +2899,11 @@
         break;
       }
       case "data-raw": {
-        var backend = CQP.storage.backend();
-        var dump = {};
-        var storeKeys = CQP.storage.keys();
-        for (var k = 0; k < storeKeys.length; k += 1) {
-          try {
-            dump[storeKeys[k]] = backend && backend.getItem ? backend.getItem(storeKeys[k]) : null;
-          } catch (err) {
-            dump[storeKeys[k]] = "(读取失败)";
-          }
-        }
-        downloadText("密码赛原始存储_" + CQP.localStamp(new Date()) + ".txt", JSON.stringify(dump, null, 2));
-        toast("已导出原始存储内容（用于排查）");
+        downloadText(
+          "密码赛服务端数据_" + CQP.localStamp(new Date()) + ".txt",
+          JSON.stringify({ bankSlug: S.bankSlug, rev: S.rev, store: S.store }, null, 2)
+        );
+        toast("已导出当前题库的服务端数据（用于排查）");
         break;
       }
       case "mock-wrong-to-book": {
@@ -2153,11 +2935,64 @@
         break;
       }
       case "modal-close": closeModal(); break;
+
+      // ---- 团队页 ----
+      case "team-reload": loadTeam(true); break;
+
+      // ---- 管理后台（仅 admin） ----
+      case "admin-reload": loadAdmin(true); break;
+      case "admin-user-disable": {
+        var offId = el.getAttribute("data-id");
+        confirmBox("停用账号", "<p>该账号将无法登录，已登录的会话立即失效。学习数据保留。</p>", function () {
+          api("/api/admin/users/" + offId + "/disabled", { method: "POST", body: { disabled: true } })
+            .then(function () { toast("账号已停用"); loadAdmin(true); })
+            .catch(function (err) { toast(failure(err, "停用失败")); });
+        }, "停用");
+        break;
+      }
+      case "admin-user-enable": {
+        api("/api/admin/users/" + el.getAttribute("data-id") + "/disabled", {
+          method: "POST", body: { disabled: false },
+        }).then(function () { toast("账号已启用"); loadAdmin(true); })
+          .catch(function (err) { toast(failure(err, "启用失败")); });
+        break;
+      }
+      case "admin-user-role": {
+        var roleId = el.getAttribute("data-id");
+        var nextRole = el.getAttribute("data-role");
+        api("/api/admin/users/" + roleId + "/role", { method: "POST", body: { role: nextRole } })
+          .then(function () { toast(nextRole === "admin" ? "已设为管理员" : "已降为普通用户"); loadAdmin(true); })
+          .catch(function (err) { toast(failure(err, "修改角色失败")); });
+        break;
+      }
+      case "admin-user-pass":
+        adminResetPassword(el.getAttribute("data-id"), el.getAttribute("data-name"));
+        break;
+      case "admin-bank-delete": {
+        var delSlug = el.getAttribute("data-slug");
+        confirmBox("删除题库", "<p>将删除题库 <span class=\"mono\">" + esc(delSlug) +
+          "</span> 以及它的全部题目。各账号在该题库下的学习数据会保留，但题库本身不可恢复。</p>", function () {
+          api("/api/admin/banks/" + encodeURIComponent(delSlug), { method: "DELETE" })
+            .then(function () {
+              toast("题库已删除");
+              if (S.bankSlug === delSlug) { loadBanks().then(function () { loadBank(S.bankSlug); }); }
+              loadAdmin(true);
+            })
+            .catch(function (err) { toast(failure(err, "删除失败")); });
+        }, "删除");
+        break;
+      }
       default: break;
     }
   }
 
+  // 监听器只绑一次：boot() 与 bootAfterAuth() 都会调本函数，
+  // 重复绑定会让一次点击执行两次（例如「下一题」一下跳两题）。
+  var eventsBound = false;
+
   function bindEvents() {
+    if (eventsBound) return;
+    eventsBound = true;
     var main = $("main");
     main.addEventListener("click", function (event) {
       var target = event.target.closest("[data-act]");
@@ -2213,6 +3048,7 @@
         case "review-chapter": S.reviewFilter.chapter = target.value; S.reviewLimit = 60; render(); break;
         case "review-flag": toggleFlag(target.getAttribute("data-qid"), target.checked); render(); break;
         case "importFile": if (target.files && target.files[0]) handleImportFile(target.files[0]); break;
+        case "admin-bank-upload": if (target.files && target.files[0]) uploadBankFile(target.files[0]); break;
         default: break;
       }
     });
@@ -2234,6 +3070,14 @@
       if (!target) return;
       go(target.getAttribute("data-nav"));
     });
+    var whoami = $("whoami");
+    if (whoami) {
+      whoami.addEventListener("click", function (event) {
+        var target = event.target.closest("[data-act]");
+        if (!target) return;
+        handleAction(target.getAttribute("data-act"), target, event);
+      });
+    }
     // 卸载兜底：提交即落库已是主路径，这里再 flush 一次（含进行中的模拟赛）
     window.addEventListener("beforeunload", flushPractice);
     window.addEventListener("pagehide", flushPractice);
@@ -2271,12 +3115,59 @@
   }
 
   // ---------------------------------------------------------------- 启动
+  /**
+   * 登录成功后的启动链：题库清单 → 当前题库 → 该题库的学习文档。
+   * 三步都依赖服务端，任一步失败都要留住界面（显示 banner），不能白屏。
+   */
+  function bootAfterAuth() {
+    banner("");
+    return loadBanks()
+      .then(function (ok) {
+        if (!ok) return false;
+        return loadBank(S.bankSlug);
+      })
+      .then(function (ok) {
+        if (ok === false) return false;
+        return loadStore(S.bankSlug);
+      })
+      .then(function () {
+        ensureNickname();
+        S.practice = null;
+        S.mock = null;
+        S.answers = new Map();
+        ensureNav();
+        bindEvents();
+        render();
+        // 服务端还挂着一场 running 的模拟赛（上次没交卷就关了页面）时自动接着考，
+        // 否则用户看到的是「开始答题」，一点就浪费掉那张卷的已答内容。
+        return resumeMock().then(function (exam) {
+          if (exam) {
+            render();
+            toast("已接着上次未交的模拟赛继续（第 " + (S.mock.idx + 1) + " 题）");
+          }
+          return true;
+        });
+      })
+      .catch(function (err) {
+        banner("error", "初始化失败：" + failure(err, "网络异常") + "（请刷新页面重试）");
+        return false;
+      });
+  }
+
   function boot() {
-    initStorage();
-    if (!initBank()) return;
     bindEvents();
-    render();
-    if (!S.storageOk) banner("error", "本地存储不可用，数据无法保存，请立即导出备份（当前会话仍可答题，刷新即丢失）");
+    initSession()
+      .then(function (ok) {
+        if (!ok) return false;
+        return bootAfterAuth();
+      })
+      .catch(function (err) {
+        if (err && err.status === 401) return false;
+        $("main").innerHTML = '<div class="card"><h1>无法连接服务端</h1><div class="muted mt8">' +
+          esc(failure(err, "网络异常")) +
+          "</div><div class=\"row mt12\"><button class=\"primary\" data-act=\"reload\">重新加载</button></div></div>";
+        return false;
+      });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
@@ -2287,6 +3178,10 @@
     state: S,
     render: render,
     refreshBank: refreshBank,
+    switchBank: switchBank,
+    fetchAnswers: fetchAnswers,
+    applyAnswers: applyAnswers,
+    flushStore: flushStore,
     // 测试钩子：驱动界面流程（供 node 下的 DOM shim 冒烟测试使用）
     __test: {
       action: handleAction,
@@ -2304,8 +3199,11 @@
       confirmImport: confirmImport,
       pending: function () { return S.io.pending; },
       setPending: function (pending) { S.io.pending = pending; },
-      rescueExport: rescuePayload,
-      rescueFileName: rescueFileName,
+      bootAfterAuth: bootAfterAuth,
+      loadBanks: loadBanks,
+      loadBank: loadBank,
+      loadStore: loadStore,
+      setUser: function (user) { S.user = user; },
     },
   };
 })();

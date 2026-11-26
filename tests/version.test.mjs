@@ -6,12 +6,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { build } from "../tools/build.mjs";
-import { createDom } from "./helpers/domshim.mjs";
+import { verifyArtifact } from "../tools/build.mjs";
+import { createServerApp, serverArtifact } from "./helpers/serverapp.mjs";
 import { CQP } from "../src/core/index.mjs";
 import { cn_VERSION, cn_BANK_SCHEMA_VERSION, cn_STORE_SCHEMA_VERSION, cn_EXPORT_SCHEMA_VERSION } from "../src/core/constants.mjs";
 
@@ -19,8 +17,6 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const realBankPath = path.join(root, "src", "data", "bank.json");
 const fixturePath = path.join(here, "fixtures", "bank.sample.json");
-// t46 O-01：临时产物写系统临时目录，绝不落在交付目录 dist/
-const artifactPath = path.join(os.tmpdir(), "__cqp_version_test.html");
 const bank = JSON.parse(fs.readFileSync(fs.existsSync(realBankPath) ? realBankPath : fixturePath, "utf8"));
 const BANK_VERSION = bank.bankVersion;
 
@@ -62,28 +58,6 @@ function mkInput(extra) {
     },
     extra || {}
   );
-}
-
-function extractScript(html, id) {
-  const start = html.indexOf('<script id="' + id + '"');
-  assert.ok(start > 0, "missing script " + id);
-  const openEnd = html.indexOf(">", start);
-  const close = html.indexOf("</script>", openEnd);
-  return html.slice(openEnd + 1, close);
-}
-
-function bootApp() {
-  const bankPath = fs.existsSync(realBankPath) ? realBankPath : fixturePath;
-  const result = build({ bankPath, outPath: artifactPath, reportPath: null });
-  assert.equal(result.ok, true, "build must succeed so the shipped artifact can be inspected");
-  const html = fs.readFileSync(artifactPath, "utf8");
-  const dom = createDom();
-  dom.getElementById("bank-data").textContent = extractScript(html, "bank-data");
-  const context = vm.createContext(dom.context);
-  vm.runInContext(extractScript(html, "cqp-core"), context, { filename: "core.js" });
-  dom.window.CQP = context.CQP;
-  vm.runInContext(extractScript(html, "cqp-app"), context, { filename: "app.js" });
-  return { dom, html, CQP: context.CQP, CQPUI: dom.window.CQPUI };
 }
 
 test("t37 version constants: app version is semver, all three schema versions stay frozen", () => {
@@ -258,35 +232,45 @@ test("t37 legacy localStorage snapshot (meta.appVersion 1.0.0) loads, stays usab
   assert.equal(reloaded.wrongbook["Q-C01-S-0001"].state, "active");
 });
 
-test("t37 shipped artifact shows the app version in the brand badge and on the home page", () => {
-  const { dom, html, CQP: ACQP, CQPUI } = bootApp();
+test("t37 shipped artifact shows the app version in the brand badge and on the home page", async () => {
+  // 服务端版：产物不再内联题库，页面启动靠 /api/*；版本号仍在构建时写死进 HTML。
+  const artifact = serverArtifact();
+  const html = artifact.html;
+  const app = await createServerApp({ nickname: "小明" });
+  const ACQP = app.CQP;
+  const CQPUI = app.CQPUI;
 
-  // 成品内字符串：构建时 {{APP_VERSION}} / {{BANK_VERSION}} 已替换（无占位符残留）
+  assert.equal(artifact.report.target, "server");
+  assert.equal(html.indexOf("{{APP_VERSION}}"), -1, "no unsubstituted APP_VERSION placeholder");
+  assert.equal(html.indexOf("{{BANK_VERSION}}"), -1, "no unsubstituted BANK_VERSION placeholder");
   assert.ok(
     html.indexOf("v" + ACQP.VERSION + " · 题库 " + BANK_VERSION) >= 0,
     "brand badge must read v<VERSION> · 题库 <bankVersion>"
   );
-  assert.equal(html.indexOf("{{APP_VERSION}}"), -1, "no unsubstituted APP_VERSION placeholder");
-  assert.equal(html.indexOf("{{BANK_VERSION}}"), -1, "no unsubstituted BANK_VERSION placeholder");
 
-  // 首页「数据与题库」卡片
+  // 首页「数据与题库」卡片（题库版本来自服务端下发的题库 JSON）
   CQPUI.state.store.meta.nickname = "小明";
   ACQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, ACQP.isoNow());
   CQPUI.render();
-  const home = dom.getElementById("main").innerHTML;
+  const home = app.main();
   assert.ok(home.indexOf("数据与题库") >= 0, "home page renders the data card");
   assert.ok(home.indexOf("应用版本") >= 0);
   assert.ok(home.indexOf(ACQP.VERSION) >= 0, "home page shows the current app version");
   assert.ok(home.indexOf(BANK_VERSION) >= 0, "home page still shows the bank version");
+  assert.equal(CQPUI.state.bankRaw.bankVersion, BANK_VERSION);
 
   // 统计页渲染正常，且共用同一品牌角标（模板在 #main 之外）
   CQPUI.go("stats");
-  assert.ok(dom.getElementById("main").innerHTML.length > 400, "stats page renders");
+  assert.ok(app.main().length > 400, "stats page renders");
   const brandAt = html.indexOf('class="brand"');
   assert.ok(brandAt >= 0, "artifact contains the brand badge");
   const brand = html.slice(brandAt, brandAt + 240);
   assert.ok(brand.indexOf("v" + ACQP.VERSION) >= 0, "brand badge in the shipped artifact carries the app version");
   assert.ok(brand.indexOf(BANK_VERSION) >= 0, "brand badge carries the bank version");
 
-  fs.rmSync(artifactPath, { force: true });
+  // 产物自检：服务端目标 11 项全过（含 no inlined bank / calls server API）
+  const check = verifyArtifact(html, { target: "server", bank });
+  assert.equal(check.ok, true, JSON.stringify(check.checks.filter((c) => !c.ok)));
+  assert.ok(check.checks.some((c) => c.name === "no inlined bank (server target)" && c.ok));
+  assert.ok(check.checks.some((c) => c.name === "app script calls server API" && c.ok));
 });

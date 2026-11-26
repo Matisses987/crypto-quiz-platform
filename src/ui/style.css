@@ -187,3 +187,47 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .topbar { flex-wrap: wrap; }
   .brand { font-size: 15px; }
 }
+
+/* ---------------------------------------------------------------- 服务器版新增 */
+
+.whoami { display: flex; align-items: center; }
+.whoamibtn {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  background: #1f2937; color: #e5e7eb; border: 1px solid #374151;
+  border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer;
+}
+.whoamibtn:hover { background: #374151; }
+.whoamimeta { font-size: 11px; color: #9ca3af; }
+
+.bankswitch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.bankswitch select { max-width: 260px; }
+
+/* 登录 / 注册 */
+.authgate { display: flex; justify-content: center; padding: 56px 16px; }
+.authcard {
+  width: 100%; max-width: 400px; background: #fff; border: 1px solid #e5e7eb;
+  border-radius: 14px; padding: 26px 24px; box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+.authcard h1 { font-size: 22px; margin: 0 0 6px; }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid #e5e7eb; }
+.tabs button {
+  border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; padding: 7px 12px; color: #6b7280; font-size: 14px;
+}
+.tabs button.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+.field { display: block; margin: 10px 0; }
+.field > span { display: block; font-size: 12px; color: #4b5563; margin-bottom: 4px; }
+.field input { width: 100%; }
+button.block { width: 100%; }
+.sep { border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+
+/* ---- 管理后台 ---- */
+.row-ops { gap: 6px; flex-wrap: wrap; }
+.row-ops button { font-size: 12px; padding: 3px 9px; }
+.filelabel { position: relative; overflow: hidden; cursor: pointer; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.filelabel:hover { background: #f1f5f9; }
+.filelabel input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+#navAdmin.hidden { display: none; }
+
+/* [hidden] 的浏览器默认 display:none 会被 .field{display:block} 等作者样式覆盖，这里显式兜底 */
+[hidden] { display: none !important; }

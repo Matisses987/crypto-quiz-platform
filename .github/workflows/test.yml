@@ -9,8 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 服务端版用到 node:sqlite（需要 Node >= 22.5），所以不能再用 node 20。
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+      - name: Validate question bank
+        run: node tools/validate_bank.mjs
+      - name: Build server artifact
+        run: node tools/build.mjs --target server --strict
       - name: Run test suite
         run: node --test tests/

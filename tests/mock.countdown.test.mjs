@@ -1,299 +1,270 @@
-// t28: mock exam countdown must follow real time (immutable limitSec baseline, derived remaining).
-// Two angles: (1) controlled clock with a captured interval callback; (2) real setInterval smoke.
+// 模拟考倒计时（服务端版）。
+//
+// 服务端版把「计时权威」搬到了服务器：
+//   * 前端 state.mock.startedAt = Date.parse(exam.startedAt)，remaining 由「现在 - startedAt」派生；
+//   * 到点自动交卷 = 前端 mockTick 在 left<=0 时调 submitMock(true) → POST /api/mock/:id/submit {autoSubmitted:true}；
+//   * 真正判定「超时」的是 server/mock.js：elapsed > planSec + 30s 就是 autoSubmitted（客户端说了不算）。
+//
+// 所以这里分两层验证：
+//   1. 前端：remaining 必须由 M.startedAt + M.limitSec 派生（改时钟只改 now，不碰 remaining 本身）；
+//      跨导航不得冻结；到点必须带 autoSubmitted:true 打到服务端。
+//   2. 服务端：超时判定见 tests/server.mock.test.mjs（直接调 server/mock.js）。
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import vm from "node:vm";
-import { fileURLToPath } from "node:url";
-import { build } from "../tools/build.mjs";
-import { createDom } from "./helpers/domshim.mjs";
+import { createServerApp, fakeActionElement } from "./helpers/serverapp.mjs";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..");
-const fixturePath = path.join(here, "fixtures", "bank.sample.json");
-const realPath = path.join(root, "src", "data", "bank.json");
-// t46 O-01：临时产物写系统临时目录，绝不落在交付目录 dist/
-const artifactPath = path.join(os.tmpdir(), "__cqp_countdown_test.html");
+const MOCK_LIMIT = 3600;
 
-function extractScript(html, id) {
-  const start = html.indexOf('<script id="' + id + '"');
-  assert.ok(start > 0, "missing script " + id);
-  const openEnd = html.indexOf(">", start);
-  const close = html.indexOf("</script>", openEnd);
-  return html.slice(openEnd + 1, close);
+/** 点导航栏（走真实 #nav 点击委托 → go(page)） */
+function navClick(app, page) {
+  const nav = app.dom.getElementById("nav");
+  const button = {
+    getAttribute(name) {
+      return name === "data-nav" ? page : null;
+    },
+  };
+  const fired = app.dom.fire(nav, "click", { target: { closest: () => button }, preventDefault() {} });
+  assert.ok(fired >= 1, "导航点击应有监听器接住");
 }
 
-function bootApp() {
-  const bankPath = fs.existsSync(realPath) ? realPath : fixturePath;
-  const result = build({ bankPath, outPath: artifactPath, reportPath: null });
-  assert.equal(result.ok, true);
-  const html = fs.readFileSync(artifactPath, "utf8");
-  const dom = createDom();
-  dom.getElementById("bank-data").textContent = extractScript(html, "bank-data");
-  const context = vm.createContext(dom.context);
-  vm.runInContext(extractScript(html, "cqp-core"), context, { filename: "core.js" });
-  dom.window.CQP = context.CQP;
-  vm.runInContext(extractScript(html, "cqp-app"), context, { filename: "app.js" });
-  const CQPUI = dom.window.CQPUI;
-  CQPUI.state.store.meta.nickname = "小明";
-  context.CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, context.CQP.isoNow());
-  CQPUI.render();
-  return { dom, context, CQP: context.CQP, CQPUI };
+/** 弹窗里的按钮（confirmBox 生成的 modal-ok / modal-close） */
+function modalButton(app, act) {
+  const box = app.dom.getElementById("modalRoot").firstChild.firstChild;
+  return box.querySelector('[data-act="' + act + '"]');
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function clickModal(app, act) {
+  const node = modalButton(app, act);
+  const fired = app.dom.fire(node, "click", { target: node, preventDefault() {} });
+  assert.ok(fired >= 1, "弹窗按钮 " + act + " 应有点击监听");
+}
 
-test("mock countdown: derived from an immutable limitSec baseline (controlled clock)", () => {
-  const { dom, context, CQP, CQPUI } = bootApp();
-
-  // 受控时钟：Date.now 由测试推进；setInterval 只捕获回调，由测试手动触发
+/** 受控时钟：只替换 vm 上下文里的 Date.now，真实 Date.parse 不动 */
+function installFakeNow(context) {
   const ctxDate = vm.runInContext("Date", context);
-  const realDateNow = ctxDate.now;
-  let fakeNow = Date.parse("2026-09-20T12:00:00+08:00"); // publication-safe constant (t49)
-  let scheduled = null;
-  ctxDate.now = () => fakeNow;
-  dom.window.setInterval = (fn) => {
-    scheduled = fn;
-    return 42;
+  const realNow = ctxDate.now;
+  let fake = null;
+  ctxDate.now = () => (fake === null ? realNow() : fake);
+  return {
+    set(ms) {
+      fake = ms;
+    },
+    restore() {
+      ctxDate.now = realNow;
+      fake = null;
+    },
   };
-  dom.window.clearInterval = () => {
-    scheduled = null;
-  };
-
-  CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
-  const M = CQPUI.__test.mockState();
-  assert.equal(M.limitSec, 3600, "限额基准来自 paper.timeLimitSec");
-  assert.equal(M.remaining, 3600, "初始剩余 = 限额");
-  assert.equal(CQP.MOCK_LIMITS.timeLimitSec, 3600, "限额口径来自 CQP.MOCK_LIMITS");
-
-  const start = fakeNow;
-  const tickAt = (seconds) => {
-    fakeNow = start + seconds * 1000;
-    scheduled();
-  };
-
-  for (const t of [0, 1, 10, 30, 60, 300, 3599]) {
-    tickAt(t);
-    assert.equal(M.remaining, 3600 - t, "t=" + t + "s 时剩余必须精确等于 limitSec - t（0 容差）");
-    assert.equal(M.phase, "running", "t=" + t + "s 时不得自动交卷");
-  }
-
-  // 修复前的实际故障点：t=60s 就已归零并强制交卷
-  tickAt(60);
-  assert.equal(M.remaining, 3540);
-  assert.equal(M.phase, "running", "t=60s 必须仍在答题（修复前故障点）");
-  assert.equal(dom.getElementById("mockTimer").textContent, "59:00", "t=60s 显示 59:00");
-  assert.equal(dom.getElementById("mockTimer").className.indexOf("danger"), -1, "t=60s 不应出现危险样式");
-
-  // 危险样式只在剩余 ≤300s 时出现（t=3300 → 剩 300s）
-  tickAt(3300);
-  assert.equal(M.remaining, 300);
-  assert.equal(dom.getElementById("mockTimer").textContent, "05:00");
-  assert.ok(dom.getElementById("mockTimer").className.indexOf("danger") >= 0, "剩 5 分钟时出现危险样式");
-  assert.equal(M.phase, "running", "剩 300s 仍不得交卷");
-
-  // 到点（t=3600）才自动交卷
-  tickAt(3600);
-  assert.equal(M.remaining, 0);
-  assert.equal(M.phase, "result", "恰好到限额才自动交卷");
-  assert.equal(M.session.autoSubmitted, true, "autoSubmitted=true");
-  assert.equal(M.session.timeLimitSec, 3600, "session.timeLimitSec 仍为 3600");
-  assert.equal(CQPUI.state.store.sessions.length, 1, "只写入 1 场 session");
-  assert.equal(scheduled === null, true, "自动交卷后定时器已停止（stopMockTimer）");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("到点自动交卷") > 0, "结果页显示自动交卷文案");
-  assert.equal(CQP.masteryOverall(CQPUI.state.store.records.filter((r) => r.mode === "mock")).attempts >= 0, true);
-
-  // 定时器已停 → 再手动 tick 也不会重复交卷/重复写 session
-  if (scheduled) scheduled();
-  assert.equal(CQPUI.state.store.sessions.length, 1, "不得重复交卷或重复写 session");
-
-  ctxDate.now = realDateNow;
-  fs.rmSync(artifactPath, { force: true });
-});
-
-test("mock countdown: real setInterval ticks once per second and submits at the limit", async () => {
-  const { dom, CQPUI } = bootApp();
-  CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
-  const M = CQPUI.__test.mockState();
-  assert.equal(M.remaining, 3600);
-
-  // 真实计时冒烟：把本次上限压到 2 秒（只改测试期基准，产品默认仍是 3600）
-  M.limitSec = 2;
-  M.startedAt = Date.now();
-
-  await sleep(1200);
-  assert.equal(M.phase, "running", "1.2s（限额 2s）时不得交卷");
-  assert.ok(M.remaining <= 1 && M.remaining >= 0, "1.2s 时剩余应为 1 或 0，实测 " + M.remaining);
-  assert.equal(dom.getElementById("mockTimer").textContent, "00:0" + M.remaining);
-
-  await sleep(2000); // 累计约 3.2s > 2s
-  assert.equal(M.phase, "result", "真实计时到限额后必须自动交卷");
-  assert.equal(M.session.autoSubmitted, true, "autoSubmitted=true");
-  assert.equal(M.remaining, 0, "剩余归零");
-  assert.equal(CQPUI.state.store.sessions.length, 1, "只写 1 场 session");
-  assert.equal(M.session.timeLimitSec, 3600, "限额口径不变");
-  assert.ok(M.session.result.totalElapsedMs >= 0 && M.session.result.totalElapsedMs <= 3600000, "总用时在限额内");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("到点自动交卷") > 0, "结果页显示自动交卷文案");
-
-  fs.rmSync(artifactPath, { force: true });
-});
-
-// 导航辅助：走 app 真正的事件通路（#nav 上的委托 click）；弹窗按钮走 openModal 注册的监听器
-function navClick(dom, page) {
-  const btn = { getAttribute: (name) => (name === "data-nav" ? page : null) };
-  dom.fire(dom.getElementById("nav"), "click", { target: { closest: () => btn } });
-}
-function modalClick(dom, act) {
-  const box = dom.getElementById("modalRoot").firstChild.firstChild;
-  dom.fire(box.querySelector('[data-act="' + act + '"]'), "click");
 }
 
-test("mock countdown: navigation never freezes the timer (t31 F-02, controlled clock)", () => {
-  const { dom, context, CQPUI } = bootApp();
+async function startMock(app) {
+  app.CQPUI.go("mock");
+  app.CQPUI.__test.action("mock-start", fakeActionElement({ "data-act": "mock-start" }));
+  await app.settle();
+  const mock = app.CQPUI.__test.mockState();
+  assert.equal(mock.phase, "running", "出卷后应进入 running");
+  return mock;
+}
 
-  const ctxDate = vm.runInContext("Date", context);
-  const realDateNow = ctxDate.now;
-  let fakeNow = Date.parse("2026-09-20T12:00:00+08:00"); // publication-safe constant (t49)
-  let scheduled = null;
-  ctxDate.now = () => fakeNow;
-  dom.window.setInterval = (fn) => {
-    scheduled = fn;
-    return 42;
-  };
-  dom.window.clearInterval = () => {
-    scheduled = null;
-  };
-  const timerActive = () => CQPUI.state.mockTimer !== null && scheduled !== null;
-  const tickFrom = (base, seconds) => {
-    fakeNow = base + seconds * 1000;
-    if (scheduled) scheduled();
-  };
-  let start = fakeNow;
-  const tickAt = (seconds) => tickFrom(start, seconds);
+/** 手动驱动一次 500ms 轮询 */
+function tick(app) {
+  const fns = app.clock.intervalFns();
+  assert.ok(fns.length >= 1, "running 阶段必须有计时器在跑");
+  for (const fn of fns) fn();
+}
 
-  // 逐序列取证（CQP_COUNTDOWN_TRACE=1 时打印，英文 ASCII）
-  const trace = [];
-  const rec = (tag) => {
-    trace.push(tag + " remaining=" + M.remaining + " timerActive=" + timerActive() + " phase=" + M.phase + " page=" + CQPUI.state.page);
-  };
+test("mock countdown: remaining is derived from an immutable limitSec baseline, not decremented", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const clockCtl = installFakeNow(app.context);
+  const mock = await startMock(app);
 
-  CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
-  const M = CQPUI.__test.mockState();
-  start = fakeNow;
-  tickAt(2);
-  assert.equal(M.remaining, 3598);
-  assert.equal(timerActive(), true, "开局定时器活动");
-  rec("00-start(+2s)");
+  assert.equal(mock.limitSec, MOCK_LIMIT);
+  assert.equal(mock.limitSec, app.CQP.MOCK_LIMITS.timeLimitSec);
+  assert.equal(mock.remaining, MOCK_LIMIT);
+  assert.equal(app.state.page, "mock");
 
-  // ① 运行中点当前导航项「模拟选拔赛」→ 不得停表
-  navClick(dom, "mock");
-  assert.equal(CQPUI.state.page, "mock", "① 仍在模拟赛页");
-  assert.equal(timerActive(), true, "① 点当前导航项后 timerActive === true");
-  rec("01-same-nav-click");
-  tickAt(3);
-  assert.equal(M.remaining, 3597, "① 倒计时继续按 1 秒/秒递减");
-  rec("01-after-1s");
-  tickAt(10);
-  assert.equal(M.remaining, 3590);
-  rec("01-after-8s");
+  // 前端确实用 startedAt + limitSec 派生（而不是把 remaining 自己减来减去）
+  assert.equal(mock.startedAt, Date.parse(mock.paper.startedAt), "startedAt 来自服务端下发的 exam.startedAt");
+  assert.ok(Number.isFinite(mock.startedAt) && mock.startedAt > 0);
 
-  // ② 点其它导航 → 取消离开 → 仍在考场且计时继续
-  navClick(dom, "stats");
-  assert.ok(dom.getElementById("modalRoot").innerHTML.indexOf("正在模拟赛中") > 0, "② 弹出离开确认");
-  assert.equal(CQPUI.state.page, "mock", "② 未确认前仍在考场");
-  rec("02-leave-prompt-open");
-  modalClick(dom, "modal-close");
-  assert.equal(CQPUI.state.page, "mock", "② 取消后仍在考场");
-  assert.equal(timerActive(), true, "② 取消后定时器仍活动");
-  rec("02-cancel-leave");
-  tickAt(30);
-  assert.equal(M.remaining, 3570, "② 取消后倒计时继续");
-  assert.equal(M.startedAt, start, "② 未重设 startedAt（严禁重置）");
-  assert.equal(M.limitSec, 3600, "② 限额基准未变");
-  assert.equal(M.phase, "running");
-  rec("02-after-20s");
+  const timer = app.dom.getElementById("mockTimer");
+  assert.equal(timer.textContent, "60:00", "开局应显示 60:00");
+  assert.equal(timer.className, "timer", "剩余时间充足时不该有 danger");
 
-  // ③ 确认离开 → 场次作废、定时器停止、不新增 session
-  const sessionsBefore = CQPUI.state.store.sessions.length;
-  navClick(dom, "stats");
-  modalClick(dom, "modal-ok");
-  assert.equal(CQPUI.state.page, "stats", "③ 确认后离开模拟赛页");
-  assert.notEqual(M.phase, "running", "③ 场次退出 running");
-  assert.equal(timerActive(), false, "③ 定时器停止");
-  assert.equal(CQPUI.state.store.sessions.length, sessionsBefore, "③ 作废不新增 session");
-  rec("03-confirm-leave");
+  const intervalJobs = app.clock.intervalJobs();
+  assert.equal(intervalJobs.length, 1, "只有一个倒计时轮询");
+  assert.equal(intervalJobs[0].ms, 500, "轮询间隔 500ms（每秒两次，显示按秒向下取整）");
 
-  // ③b 重新开始 → 全新 3600s 场次、旧场次不残留
-  fakeNow = fakeNow + 60000;
-  CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
-  const M2 = CQPUI.__test.mockState();
-  assert.equal(M2.remaining, 3600, "③b 新场次为全新 3600s（不是回到旧场次）");
-  assert.equal(M2.limitSec, 3600);
-  assert.equal(M2.session, null, "③b 旧场次不残留");
-  assert.equal(timerActive(), true, "③b 新场次定时器活动");
-  rec("03b-new-session");
-  const start2 = fakeNow;
-  tickFrom(start2, 1);
-  assert.equal(M2.remaining, 3599, "③b 新场次从新起点开始计时（不继承旧场次已过时间）");
-  rec("03b-after-1s");
-
-  if (process.env.CQP_COUNTDOWN_TRACE === "1") {
-    console.log("[countdown-trace] limitSec=" + M.limitSec + " oldStart=" + start + " newStart=" + start2 + " newStartDeltaSec=" + (start2 - start) / 1000 + " navSameItemKeptTimer=true");
-    for (const line of trace) console.log("[countdown-trace] " + line);
+  for (const seconds of [1, 10, 60, 300, 3599]) {
+    clockCtl.set(mock.startedAt + seconds * 1000);
+    tick(app);
+    assert.equal(mock.remaining, MOCK_LIMIT - seconds, seconds + " 秒后剩余应等于 limitSec - elapsed");
+    assert.equal(mock.phase, "running");
   }
 
-  ctxDate.now = realDateNow;
-  fs.rmSync(artifactPath, { force: true });
+  // 派生语义的铁证：把时钟往回拨，remaining 应该变大（递减实现做不到这点）
+  clockCtl.set(mock.startedAt + 50 * 1000);
+  tick(app);
+  assert.equal(mock.remaining, MOCK_LIMIT - 50, "回拨时钟后剩余时间应重新派生");
+
+  // 5 分钟以内切 danger 样式
+  clockCtl.set(mock.startedAt + (MOCK_LIMIT - 300) * 1000);
+  tick(app);
+  assert.equal(mock.remaining, 300);
+  assert.equal(app.dom.getElementById("mockTimer").textContent, "05:00");
+  assert.match(app.dom.getElementById("mockTimer").className, /danger/);
+
+  clockCtl.restore();
 });
 
-test("mock countdown: real timer survives navigation roundtrips and submits at the limit", async () => {
-  const { dom, CQPUI } = bootApp();
-  CQPUI.go("mock");
-  CQPUI.__test.action("mock-start");
-  const M = CQPUI.__test.mockState();
-  M.limitSec = 3; // 缩短限额（仅测试期），期间做一次「点当前导航项」与一次「去其它页再取消」
-  M.startedAt = Date.now();
-  const realTrace = [];
-  const recReal = (tag) => realTrace.push(tag + " remaining=" + M.remaining + " timerActive=" + (CQPUI.state.mockTimer !== null) + " phase=" + M.phase);
+test("mock countdown: reaching the limit submits with autoSubmitted:true and shows the late notice", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const clockCtl = installFakeNow(app.context);
+  const mock = await startMock(app);
+  const examId = mock.paper.sessionId;
 
-  await sleep(1100);
-  assert.equal(M.phase, "running", "1.1s（限额 3s）仍在答题");
-  assert.ok(CQPUI.state.mockTimer !== null, "定时器活动");
-  recReal("00-start(+1.1s)");
+  clockCtl.set(mock.startedAt + (MOCK_LIMIT - 1) * 1000);
+  tick(app);
+  assert.equal(mock.phase, "running", "最后一秒还没到点");
+  assert.equal(mock.remaining, 1);
 
-  navClick(dom, "mock"); // ① 点当前导航项
-  assert.equal(CQPUI.state.page, "mock");
-  assert.ok(CQPUI.state.mockTimer !== null, "① 点当前导航项后定时器仍活动（F-02 修复点）");
-  recReal("01-same-nav-click");
+  clockCtl.set(mock.startedAt + MOCK_LIMIT * 1000);
+  tick(app);
+  await app.settle();
 
-  await sleep(400);
-  const before = M.remaining;
-  navClick(dom, "stats"); // ② 去其它页 → 取消
-  assert.ok(dom.getElementById("modalRoot").innerHTML.indexOf("正在模拟赛中") > 0, "② 弹出离开确认");
-  modalClick(dom, "modal-close");
-  assert.equal(CQPUI.state.page, "mock", "② 取消后仍在考场");
-  assert.ok(CQPUI.state.mockTimer !== null, "② 取消后定时器仍活动");
-  assert.ok(M.remaining <= before, "② 取消后剩余时间不回升（未重置）");
-  recReal("02-cancel-leave");
+  assert.equal(mock.phase, "result", "到点应自动交卷进入成绩页");
+  assert.equal(mock.remaining, 0);
+  assert.ok(mock.session, "成绩页应有服务端返回的场次");
+  assert.equal(mock.session.autoSubmitted, true);
 
-  await sleep(2000); // 累计约 3.5s > 3s
-  assert.equal(M.phase, "result", "在原限额处自动交卷（不提前、不延后）");
-  assert.equal(M.session.autoSubmitted, true, "autoSubmitted=true");
-  assert.equal(M.remaining, 0, "剩余归零");
-  assert.equal(CQPUI.state.store.sessions.length, 1, "只写一条 session");
-  assert.ok(dom.getElementById("main").innerHTML.indexOf("到点自动交卷") > 0, "结果页显示自动交卷文案");
-  recReal("03-auto-submitted");
+  const submit = app.lastCall(/^POST \/api\/mock\/[^/]+\/submit$/);
+  assert.ok(submit, "必须打到 POST /api/mock/:id/submit");
+  assert.equal(submit.url, "/api/mock/" + encodeURIComponent(examId) + "/submit");
+  assert.equal(submit.body.autoSubmitted, true, "自动交卷必须带 autoSubmitted:true");
+  assert.equal(submit.body.nickname, "小明");
 
-  if (process.env.CQP_COUNTDOWN_TRACE === "1") {
-    console.log("[countdown-trace-real] limitSec=3 sessions=" + CQPUI.state.store.sessions.length);
-    for (const line of realTrace) console.log("[countdown-trace-real] " + line);
+  // 服务端也认了这次交卷
+  const row = app.serverExam(examId);
+  assert.equal(row.status, "submitted");
+  assert.ok(row.submitted_at, "服务端应写入 submitted_at");
+
+  assert.match(app.main(), /到点自动交卷/, "成绩页应提示到点自动交卷");
+  assert.equal(app.clock.intervalFns().length, 0, "交卷后必须停表");
+
+  // 停表后再点也不会有第二个请求
+  const submits = app.callsMatching(/^POST \/api\/mock\/[^/]+\/submit$/);
+  assert.equal(submits.length, 1, "一场只能交一次");
+
+  clockCtl.restore();
+});
+
+test("mock countdown: navigating away asks first and navigation to the exam page never freezes it (t31 F-02)", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const clockCtl = installFakeNow(app.context);
+  const mock = await startMock(app);
+  const examId = mock.paper.sessionId;
+  const startedAt = mock.startedAt;
+
+  clockCtl.set(startedAt + 2 * 1000);
+  tick(app);
+  assert.equal(mock.remaining, MOCK_LIMIT - 2);
+
+  // 点当前页（模拟选拔赛）不得冻结计时
+  navClick(app, "mock");
+  assert.equal(app.state.page, "mock");
+  assert.equal(app.clock.intervalFns().length, 1, "回到考场页面后计时器仍在");
+  clockCtl.set(startedAt + 3 * 1000);
+  tick(app);
+  assert.equal(mock.remaining, MOCK_LIMIT - 3);
+  assert.equal(mock.startedAt, startedAt, "导航不得重置 startedAt");
+
+  // 离开要二次确认：取消 → 留在考场，计时继续
+  navClick(app, "stats");
+  assert.equal(app.state.page, "mock", "未确认前不得离开考场");
+  assert.match(app.dom.getElementById("modalRoot").innerHTML, /正在模拟赛中/);
+  clickModal(app, "modal-close");
+  assert.equal(app.dom.getElementById("modalRoot").innerHTML, "", "取消后应关闭弹窗");
+  assert.equal(app.state.page, "mock");
+  assert.equal(mock.phase, "running");
+  assert.equal(app.clock.intervalFns().length, 1, "取消离开不得停表");
+  clockCtl.set(startedAt + 30 * 1000);
+  tick(app);
+  assert.equal(mock.remaining, MOCK_LIMIT - 30, "取消离开后倒计时照旧推进");
+
+  // 确认离开 → 作废 + 停表 + 服务端也标 abandoned
+  navClick(app, "stats");
+  clickModal(app, "modal-ok");
+  await app.settle();
+
+  assert.equal(app.state.page, "stats", "确认后应离开考场");
+  assert.notEqual(mock.phase, "running", "离开后不应还处于 running");
+  assert.equal(app.clock.intervalFns().length, 0, "离开后必须停表");
+  const abandon = app.lastCall(/^POST \/api\/mock\/[^/]+\/abandon$/);
+  assert.ok(abandon, "作废必须打到 POST /api/mock/:id/abandon");
+  assert.equal(abandon.url, "/api/mock/" + encodeURIComponent(examId) + "/abandon");
+  assert.equal(app.serverExam(examId).status, "abandoned", "服务端场次应标为 abandoned");
+
+  // 再开一场：全新 60:00，不复用作废场次。
+  // 新场次由服务端用真实时间签发 startedAt，所以先把受控时钟放回真实时间，
+  // 否则「假 now 仍停在上一场 +30s」会让新场次一开局就少 30 秒。
+  clockCtl.set(null);
+  app.CQPUI.go("mock", true);
+  app.CQPUI.__test.action("mock-start", fakeActionElement({ "data-act": "mock-start" }));
+  await app.settle();
+  const again = app.CQPUI.__test.mockState();
+  assert.equal(again.phase, "running");
+  assert.notEqual(again.paper.sessionId, examId, "作废后应开新场次");
+  assert.equal(again.remaining, MOCK_LIMIT, "新场次从满时长开始");
+  assert.equal(again.limitSec, MOCK_LIMIT);
+  assert.equal(again.session, null);
+  assert.equal(app.clock.intervalFns().length, 1, "新场次重新起表");
+
+  clockCtl.restore();
+});
+
+test("mock countdown: roundtrips through other pages keep counting and still submit at the limit", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const clockCtl = installFakeNow(app.context);
+  const mock = await startMock(app);
+  const examId = mock.paper.sessionId;
+  const startedAt = mock.startedAt;
+
+  clockCtl.set(startedAt + 5 * 1000);
+  tick(app);
+  const before = mock.remaining;
+  assert.equal(before, MOCK_LIMIT - 5);
+
+  // 多次点导航（都指向当前页）→ 计时不抖
+  for (const round of [1, 2, 3]) {
+    navClick(app, "mock");
+    assert.equal(app.state.page, "mock");
+    assert.equal(app.clock.intervalFns().length, 1, "第 " + round + " 轮后计时器仍在");
   }
+  clockCtl.set(startedAt + 9 * 1000);
+  tick(app);
+  assert.equal(mock.remaining, MOCK_LIMIT - 9);
+  assert.ok(mock.remaining < before, "往返后剩余时间继续减少");
 
-  fs.rmSync(artifactPath, { force: true });
+  // 离开确认→取消，再来一轮，然后到点
+  navClick(app, "team");
+  clickModal(app, "modal-close");
+  assert.equal(mock.phase, "running");
+  assert.equal(app.clock.intervalFns().length, 1);
+
+  clockCtl.set(startedAt + MOCK_LIMIT * 1000);
+  tick(app);
+  await app.settle();
+
+  assert.equal(mock.phase, "result");
+  assert.equal(mock.session.autoSubmitted, true, "往返后到点仍要自动交卷");
+  assert.equal(mock.remaining, 0);
+  assert.equal(app.serverExam(examId).status, "submitted");
+  assert.match(app.main(), /到点自动交卷/);
+
+  const abandonCalls = app.callsMatching(/^POST \/api\/mock\/[^/]+\/abandon$/);
+  assert.equal(abandonCalls.length, 0, "取消离开后不应产生作废请求");
+  const submits = app.callsMatching(/^POST \/api\/mock\/[^/]+\/submit$/);
+  assert.equal(submits.length, 1);
+
+  clockCtl.restore();
 });

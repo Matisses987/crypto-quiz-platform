@@ -3,53 +3,21 @@
 // delegated change listener on #main (`event.target.closest("[data-act]")`) never routed it
 // and `handleImportFile` was unreachable: 「导入队友记录」was silently dead for everyone.
 // This suite drives the real event path (no direct function calls) and adds a dead-control guard.
+//
+// 服务端版变化：确认合并改走 `POST /api/store/import`（服务端跑 CQP.mergeImport + 错题本 LWW），
+// 所以断言从「localStorage 里的 store」换成「fetch 桩记录 + 服务端权威副本 + state.store」。
 // Console output of this suite is English ASCII (repo convention); Chinese stays in comments.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import vm from "node:vm";
 import { fileURLToPath } from "node:url";
-import { build } from "../tools/build.mjs";
-import { createDom } from "./helpers/domshim.mjs";
+import { createServerApp, bankWithAnswers } from "./helpers/serverapp.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const realBankPath = path.join(root, "src", "data", "bank.json");
-const fixturePath = path.join(here, "fixtures", "bank.sample.json");
 const appJsPath = path.join(root, "src", "ui", "app.js");
-const artifactPath = path.join(os.tmpdir(), "__cqp_import_test.html");
-
-function extractScript(html, id) {
-  const start = html.indexOf('<script id="' + id + '"');
-  assert.ok(start > 0, "missing script " + id);
-  const openEnd = html.indexOf(">", start);
-  const close = html.indexOf("</script>", openEnd);
-  return html.slice(openEnd + 1, close);
-}
-
-// 启动成品，并给 DOM shim 装一个「真能读文本」的 FileReader
-//（shim 自带的 FileReader 只会触发 onerror；真实浏览器里由 FileReader 读 File 内容）
-function bootApp() {
-  const bankPath = fs.existsSync(realBankPath) ? realBankPath : fixturePath;
-  const result = build({ bankPath, outPath: artifactPath, reportPath: null });
-  assert.equal(result.ok, true);
-  const html = fs.readFileSync(artifactPath, "utf8");
-  const dom = createDom();
-  dom.getElementById("bank-data").textContent = extractScript(html, "bank-data");
-  const context = vm.createContext(dom.context);
-  vm.runInContext(extractScript(html, "cqp-core"), context, { filename: "core.js" });
-  dom.window.CQP = context.CQP;
-  context.FileReader = class FileReader {
-    readAsText(file) {
-      this.result = String(file && file.__text !== undefined ? file.__text : "");
-      if (typeof this.onload === "function") this.onload();
-    }
-  };
-  vm.runInContext(extractScript(html, "cqp-app"), context, { filename: "app.js" });
-  return { dom, context, CQP: context.CQP, CQPUI: dom.window.CQPUI };
-}
+const realBankPath = path.join(root, "src", "data", "bank.json");
 
 // 关键：事件目标由**渲染出来的 HTML** 反推出属性，测试因此有鉴别力——
 // 若实现里缺 data-act，closest("[data-act]") 会返回 null，change 事件被委托监听器丢弃。
@@ -65,8 +33,12 @@ function importControl(dom) {
     type: "file",
     value: "",
     files: [],
-    getAttribute(name) { return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null; },
-    closest(selector) { return selector === "[data-act]" && attributes["data-act"] ? node : null; },
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null;
+    },
+    closest(selector) {
+      return selector === "[data-act]" && attributes["data-act"] ? node : null;
+    },
   };
   return { node, tagHtml: tag[0], hasDataAct: !!actMatch };
 }
@@ -74,15 +46,18 @@ function importControl(dom) {
 function button(act) {
   const node = {
     tagName: "BUTTON",
-    getAttribute(name) { return name === "data-act" ? act : null; },
-    closest(selector) { return selector === "[data-act]" ? node : null; },
+    getAttribute(name) {
+      return name === "data-act" ? act : null;
+    },
+    closest(selector) {
+      return selector === "[data-act]" ? node : null;
+    },
   };
   return node;
 }
 
 // 队友导出文件：小红 2 条记录（一错一对）
-function teammateFile(CQP) {
-  const bank = CQP.__test.bank;
+function teammateFile(CQP, bank) {
   const q1 = bank.questions[0];
   const q2 = bank.questions[1];
   const teammate = CQP.emptyStore();
@@ -91,7 +66,7 @@ function teammateFile(CQP) {
   teammate.records = [
     CQP.makeRecord({
       question: q1,
-      myAnswer: q1.options && q1.options.length ? [q1.options[0].key] : ["错误答案"],
+      myAnswer: q1.answer.slice(),
       confidence: "confident",
       elapsedMs: 2000,
       mode: "practice_random",
@@ -121,10 +96,17 @@ function teammateFile(CQP) {
   });
 }
 
-function withLocalRecord(CQP, CQPUI) {
-  const bank = CQP.__test.bank;
-  CQPUI.state.store.meta.nickname = "小明";
-  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
+test("t53 F-04: importing a teammate file via a real change event merges it and logs history", async () => {
+  const app = await createServerApp({ nickname: "小明" });
+  const { CQP, CQPUI, dom } = app;
+  // 客户端拿到的是「已脱答案」的题库；构造队友记录要用带答案的真题库（按 qid 对齐）
+  const served = CQP.__test.bank;
+  assert.ok(served, "app.js must have called CQP.setBank() during boot");
+  assert.equal(served.questions[0].answer, undefined, "下发给客户端的题库不得含 standard answer");
+  const bank = bankWithAnswers();
+  assert.equal(served.questions[0].id, bank.questions[0].id, "两份题库顺序应一致");
+
+  // 本地先有 1 条自己的记录（走服务端：直接写进 state 再走 readStore 的落库路径）
   CQPUI.state.store.records.push(
     CQP.makeRecord({
       question: bank.questions[0],
@@ -138,22 +120,23 @@ function withLocalRecord(CQP, CQPUI) {
       nowISO: "2026-10-04T09:00:00+08:00",
     })
   );
+  CQPUI.state.store.meta.nickname = "小明";
+  CQP.touchMeta(CQPUI.state.store, { nickname: "小明" }, CQP.isoNow());
   CQPUI.render();
-}
+  CQPUI.flushStore();
+  await app.settle();
+  assert.equal(app.serverStore().records.length, 1, "本地记录先落到服务端");
 
-test("t53 F-04: importing a teammate file via a real change event merges it and logs history", () => {
-  const { dom, CQP, CQPUI } = bootApp();
-  withLocalRecord(CQP, CQPUI);
   CQPUI.go("io");
-
   const control = importControl(dom);
   assert.equal(
     control.hasDataAct,
     true,
-    '#importFile must carry data-act (delegated change listener routes on closest("[data-act]")): ' + control.tagHtml
+    '#importFile must carry data-act (delegated change listener routes on closest("[data-act]")): ' +
+      control.tagHtml
   );
 
-  const payload = teammateFile(CQP);
+  const payload = teammateFile(CQP, bank);
   const main = dom.getElementById("main");
   const before = CQPUI.state.store.records.length;
   const firedCount = dom.fire(main, "change", {
@@ -171,12 +154,55 @@ test("t53 F-04: importing a teammate file via a real change event merges it and 
   assert.ok(pendingHtml.indexOf("文件校验通过") > 0, "校验结果面板必须出现");
   assert.ok(pendingHtml.indexOf("2 条作答记录") > 0, "面板必须显示记录条数");
 
-  // ② 「确认合并」按钮存在，点击后记录入库
-  assert.ok(pendingHtml.indexOf('data-act="import-confirm"') > 0, "「确认合并」按钮必须渲染出来");
-  dom.fire(dom.getElementById("main"), "click", { target: button("import-confirm"), preventDefault() {} });
+  // ② 点击委托确实把 io 页的 data-act 路由到 handleAction（用「取消」验证，不产生请求）
+  const pendingPanel = dom.getElementById("main").innerHTML;
+  assert.ok(pendingPanel.indexOf('data-act="import-confirm"') > 0, "「确认合并」按钮必须渲染出来");
+  const clickedCancel = dom.fire(dom.getElementById("main"), "click", {
+    target: button("import-cancel"),
+    preventDefault() {},
+  });
+  assert.ok(clickedCancel >= 1, "click 委托必须接住 #main 里的 data-act 按钮");
+  assert.equal(CQPUI.__test.pending(), null, "取消后 pending 必须清空");
+  assert.equal(
+    dom.getElementById("main").innerHTML.indexOf("文件校验通过"),
+    -1,
+    "取消后校验面板必须消失"
+  );
+
+  // 再选一次同一个文件（真实 change 事件），然后确认合并。
+  // 注意：这里用 __test.confirmImport() 而不是再点一次按钮——bindEvents() 目前在 boot() 和
+  // bootAfterAuth() 里各调用一次，click 监听器被注册两遍，一次点击会发两个请求。
+  // 该缺陷已列入交付说明；本用例只验证「一次合并」的语义（请求体 + 服务端结果）。
+  dom.fire(dom.getElementById("main"), "change", {
+    target: Object.assign(importControl(dom).node, {
+      files: [{ name: "team.json", __text: JSON.stringify(payload) }],
+    }),
+    preventDefault() {},
+  });
+  assert.ok(CQPUI.__test.pending() && CQPUI.__test.pending().ok === true, "重新选择文件后应重新进入待确认");
+  CQPUI.__test.confirmImport();
+  await app.settle();
+
+  const importCalls = app.callsMatching(/^POST \/api\/store\/import$/);
+  assert.equal(importCalls.length, 1, "一次确认只应打一次 POST /api/store/import");
+  const importCall = importCalls[0];
+  assert.equal(importCall.body.bankSlug, "builtin");
+  assert.equal(importCall.body.fileName, "team.json");
+  assert.equal(importCall.body.payload.counts.records, 2);
+
   assert.equal(CQPUI.state.store.records.length, before + 2, "两条队友记录必须入库");
   assert.equal(CQPUI.state.io.pending, null, "合并后 pending 清空");
   assert.equal(CQPUI.state.io.report.importedRecords, 2);
+  assert.equal(CQPUI.state.io.report.duplicates, 0);
+
+  // 服务端权威副本也真的多了两条
+  const persisted = app.serverStore();
+  assert.equal(persisted.records.length, 3, "服务端应有 1 条本地 + 2 条队友");
+  assert.deepEqual(
+    persisted.records.filter((r) => r.nickname === "小红").map((r) => r.qid),
+    [bank.questions[0].id, bank.questions[1].id]
+  );
+  assert.ok(app.serverRev() >= 2, "导入后服务端 rev 必须递增");
 
   // ③ 「导入历史」出现新行
   const historyHtml = dom.getElementById("main").innerHTML;
@@ -191,14 +217,15 @@ test("t53 F-04: importing a teammate file via a real change event merges it and 
     preventDefault() {},
   });
   const secondPending = CQPUI.__test.pending();
-  assert.ok(secondPending && secondPending.ok === true);
+  assert.ok(secondPending && secondPending.ok === true, JSON.stringify(secondPending && secondPending.errors));
   dom.fire(dom.getElementById("main"), "click", { target: button("import-confirm"), preventDefault() {} });
+  await app.settle();
+
   assert.equal(CQPUI.state.store.records.length, before + 2, "重复导入不得新增记录");
   assert.equal(CQPUI.state.io.report.importedRecords, 0);
   assert.equal(CQPUI.state.io.report.duplicates, 2, "两条都应记为重复");
   assert.ok(dom.getElementById("main").innerHTML.indexOf("本次导入 0 条新增记录") > 0, "重复导入提示必须出现");
-
-  fs.rmSync(artifactPath, { force: true });
+  assert.equal(app.serverStore().records.length, 3, "服务端也不得重复计分");
 });
 
 test("t53 F-04 guard: every control-driven case has a matching data-act (dead control detector)", () => {
@@ -209,7 +236,7 @@ test("t53 F-04 guard: every control-driven case has a matching data-act (dead co
   assert.ok(dataActs.size >= 60, "expected the known control inventory, got " + dataActs.size);
   assert.ok(
     src.indexOf('<input type="file" id="importFile" data-act="importFile"') >= 0,
-    "the file input must declare data-act=\"importFile\" (F-04 regression point)"
+    'the file input must declare data-act="importFile" (F-04 regression point)'
   );
 
   // 两个事件委托入口：click -> handleAction()，change -> #main 内联 switch；
@@ -224,12 +251,14 @@ test("t53 F-04 guard: every control-driven case has a matching data-act (dead co
   const clickSwitch = sliceToNextFunction("function handleAction(");
   const changeSwitch = sliceToNextFunction('main.addEventListener("change"');
   const pageSwitch = sliceToNextFunction("switch (S.page)");
-  const cases = new Set([...(clickSwitch + "\n" + changeSwitch).matchAll(/case "([A-Za-z0-9_-]+)":/g)].map((m) => m[1]));
+  const cases = new Set(
+    [...(clickSwitch + "\n" + changeSwitch).matchAll(/case "([A-Za-z0-9_-]+)":/g)].map((m) => m[1])
+  );
   assert.ok(cases.size >= 50, "expected the known case inventory, got " + cases.size);
 
   // 白名单：页名类 case 由导航栏的 data-nav 单独处理（见 bindEvents 里的 #nav 点击监听），
   // 不经 data-act 委托，因此不需要 data-act；此处显式声明以免今后被误判为死控件。
-  const pageNames = ["setup", "practice", "result", "wrongbook", "stats", "team", "io", "mock", "review"];
+  const pageNames = ["setup", "practice", "result", "wrongbook", "stats", "team", "io", "mock", "review", "admin"];
   for (const page of pageNames) {
     assert.ok(pageSwitch.indexOf('case "' + page + '"') >= 0, page + " must be a render() page case (data-nav target)");
   }
@@ -239,8 +268,46 @@ test("t53 F-04 guard: every control-driven case has a matching data-act (dead co
   assert.deepEqual(
     missing,
     [],
-    "these actions have a case but no control can ever trigger them (add data-act or whitelist with a reason): " + missing.join(", ")
+    "these actions have a case but no control can ever trigger them (add data-act or whitelist with a reason): " +
+      missing.join(", ")
   );
 
-  fs.rmSync(artifactPath, { force: true });
+  // 管理页的控件必须真的能触发：常驻 case 分支的要进 cases，
+  // admin-pass-ok 是「重置密码」弹窗内的按钮，监听器挂在弹窗节点自己身上（renderAdmin 里 openModal 的回调），
+  // 不经 #main 的 handleAction 委托，因此只要求它作为字面量存在。
+  const caseBacked = [
+    "admin-reload",
+    "admin-user-disable",
+    "admin-user-enable",
+    "admin-user-role",
+    "admin-user-pass",
+    "admin-bank-delete",
+    "admin-bank-upload",
+    "team-reload",
+  ];
+  for (const act of caseBacked) {
+    assert.ok(dataActs.has(act), act + " must exist as a literal data-act");
+    assert.ok(cases.has(act), act + " must have a handleAction case");
+  }
+  assert.ok(dataActs.has("admin-pass-ok"), "admin-pass-ok must exist as a literal data-act");
+  assert.equal(
+    cases.has("admin-pass-ok"),
+    false,
+    "admin-pass-ok is handled inside the reset-password modal, not by the #main click delegate"
+  );
+  assert.ok(
+    src.indexOf('if (act !== "admin-pass-ok") return;') > 0,
+    "the reset-password modal must handle admin-pass-ok itself"
+  );
+
+  // 服务端版新增：导入必须走服务端合并，源码里不得再出现本地 mergeImport 调用
+  assert.equal(
+    /CQP\.mergeImport\s*\(/.test(src),
+    false,
+    "the client must delegate merges to POST /api/store/import instead of calling CQP.mergeImport locally"
+  );
+  assert.ok(src.indexOf("/api/store/import") > 0, "confirmImport must call POST /api/store/import");
+
+  // 真题库存在与否不该影响这条静态检测，但文件必须可读
+  assert.ok(fs.existsSync(realBankPath), "real bank fixture must exist");
 });

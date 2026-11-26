@@ -1,0 +1,23 @@
+# 默认按内容自动判断，不做转换（跨平台协作最省心）
+* text=auto eol=lf
+
+# 明确强制 LF：Shell 脚本在 Termux / Linux 上带 CRLF 会直接报
+# "bad interpreter: No such file or directory" 或语法错误
+*.sh    text eol=lf
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.yml   text eol=lf
+*.example text eol=lf
+
+# Windows 脚本保持 CRLF，PowerShell 对 LF 也能跑，但保持一致更稳
+*.ps1   text eol=crlf
+
+# 二进制
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.db    binary
