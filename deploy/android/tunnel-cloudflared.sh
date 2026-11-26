@@ -19,6 +19,13 @@ APP=$(pwd)
 LOG=$APP/log
 mkdir -p "$LOG"
 
+# 从 root（开机自启）调用时 HOME / PREFIX / PATH 都可能没有，这里兜底，
+# 否则 `set -u` 会直接退出，`$HOME/cloudflared` 会退化成 `/cloudflared`。
+: "${HOME:=/data/data/com.termux/files/home}"
+: "${PREFIX:=/data/data/com.termux/files/usr}"
+case ":$PATH:" in *":$PREFIX/bin:"*) ;; *) PATH=$PREFIX/bin:$PATH;; esac
+export HOME PREFIX PATH
+
 CF=${CLOUDFLARED_BIN:-$HOME/cloudflared}
 PORT=${PORT:-3010}
 URLFILE=$LOG/cloudflared.url
@@ -33,7 +40,9 @@ if [ "${1:-}" = "--stop" ]; then
   # pidfile 可能丢（手工起过、或脚本被 kill），再按 cmdline 精确扫一遍
   for d in /proc/[0-9]*; do
     pid=${d#/proc/}
-    cmd=$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null) || continue
+    [ -r "$d/cmdline" ] || continue
+    # 注意：`< file 2>/dev/null` 抑制不了 shell 自己的重定向报错，要整体包一层
+    cmd=$( { tr '\0' ' ' < "$d/cmdline"; } 2>/dev/null ) || continue
     case "$cmd" in
       *"cloudflared tunnel --url http://127.0.0.1:$PORT"*|*"cqp-app/dnsfwd.mjs"*)
         kill "$pid" 2>/dev/null && echo "已停止残留 pid=$pid"

@@ -38,5 +38,19 @@
     [ $ATTEMPT -lt 3 ] && sleep 30
   done
 
+  # 顺手把公网隧道也拉起来（服务器起来了才有意义）
+  if [ "$CODE" = "200" ]; then
+    if [ -x "$H/cqp-app/tunnel-cloudflared.sh" ]; then
+      echo "$(date '+%F %T') starting tunnel" >> "$LOG"
+      ( cd "$H/cqp-app" && HOME=$H PREFIX=/data/data/com.termux/files/usr \
+          PATH=/data/data/com.termux/files/usr/bin:/system/bin \
+          LD_LIBRARY_PATH=/data/data/com.termux/files/usr/lib \
+          TMPDIR=/data/data/com.termux/files/usr/tmp \
+          ./tunnel-cloudflared.sh --bg >> "$LOG" 2>&1 )
+      URL=$(cat "$H/cqp-app/log/cloudflared.url" 2>/dev/null)
+      echo "$(date '+%F %T') tunnel url=${URL:-none}" >> "$LOG"
+    fi
+  fi
+
   echo "=== $(date '+%F %T') autostart end ===" >> "$LOG"
 ) > /dev/null 2>&1 &
