@@ -34,6 +34,15 @@ SakuraFrp 是**反向隧道**：你的手机/电脑主动连到节点，节点�
 
 > 同时建 HTTP 和 HTTPS 两条隧道时，**必须挂在同一个节点**，否则证书与跳转会对不上。
 
+**⚠️ 实测补充（2026-11 真机）：纯 TCP 隧道用 `http://` 访问会被网关拦成 501。**
+
+内地节点上 `http://frp-bar.com:32614/api/health` 返回 `501 Not Implemented`，正文是
+「您正试图使用 HTTP 协议访问此隧道 … 执行机房的内容合规要求和有关部门的管控规定」，
+并给出两条出路：「在您的 Web 服务器中开启 HTTPS 支持」或「使用 自动 HTTPS 功能」。
+
+所以**国内节点 + TCP 隧道 + Web 应用**这个组合，必须开自动 HTTPS（见 §9）。
+开了之后浏览器用 `https://` 访问就正常，`http://` 仍然是 501（网关策略，不是配置问题）。
+
 ---
 
 ## 2. 建隧道
@@ -202,9 +211,99 @@ done
 
 免费额度跑一个小团队（十几人日常刷题）通常够；长期用建议开 `bandwidth_limit`。
 
+> gzip 是**服务端自带**的（`server/http.js` 的 `maybeGzip`，`Content-Encoding: gzip` +
+> `Vary: Accept-Encoding`，<1 KB 不压）。上表的数字是开了 gzip 之后的实际字节数；
+> 未压缩时首页是 283 KB 左右。真机实测：走隧道时首页从 70 秒降到 5 秒就能交互。
+
 ---
 
-## 9. 排障速查
+## 9. 自动 HTTPS（国内节点 + TCP 隧道的必选项）
+
+### 9.1 为什么必须开
+
+见 §1 的实测补充：国内节点上纯 TCP 隧道用 `http://` 会被网关拦成 501。
+
+### 9.2 怎么开
+
+```bash
+# 写 extra 字段（PATCH/PUT /v4/tunnels/{id} 全是 404，只有这个 POST 有效）
+curl -s -X POST https://api.natfrp.com/v4/tunnel/edit \
+  -H "Authorization: Bearer <访问密钥>" -H "Content-Type: application/json" \
+  -d '{"id":<隧道ID>,"extra":"auto_https = <子域名>.<你的域名>"}'
+# → 200 {"extra":"auto_https = school.u2095320.nyat.app"}
+```
+
+面板上也可以：隧道 → 编辑 → 「自动 HTTPS」填子域名。
+
+**关键：要写具体域名，不能只写 `auto`。**
+
+- `auto_https = auto` → frpc 自己签一张证书（日志 `autohttps cert generated for yd.frp-bar.com`），
+  浏览器报警告、curl 要加 `-k`。
+- `auto_https = school.u2095320.nyat.app` → 从服务端下发受信证书
+  （日志 `autohttps certs loaded from server: school.u2095320.nyat.app [CN = *.u2095320.nyat.app]`），
+  `curl` 不带 `-k` 就能过，浏览器绿锁。
+
+改完 `extra` **必须重启 frpc** 才生效。
+
+### 9.3 绑定子域名
+
+```bash
+# 先看白名单词（约 90 个：school/lab/git/mc/api/www/nas/home …）
+curl -s -X POST https://api.natfrp.com/v4/domain/get \
+  -H "Authorization: Bearer <访问密钥>" -H "Content-Type: application/json" -d '{}'
+
+# 绑定（rr 必须在白名单里；cqp 不在，会报「子域名前缀 cqp 不在白名单内」）
+curl -s -X POST https://api.natfrp.com/v4/domain/bind \
+  -H "Authorization: Bearer <访问密钥>" -H "Content-Type: application/json" \
+  -d '{"rr":"school","tunnel":<隧道ID>,"domain":"u2095320.nyat.app","type":"CNAME"}'
+# → 204，DNS 立即生效
+```
+
+### 9.4 原理与禁忌
+
+`auto_https` 是 **frpc 用 TLS 对外收连接、脱壳后用明文 HTTP 连本地服务**。
+所以本地服务不需要自己配证书，`HOST=127.0.0.1` 也不用改。
+
+- ❌ 本地已经开了 HTTPS 就不要再开自动 HTTPS（会 TLS 套 TLS）
+- ❌ 非 Web 应用（游戏、远程桌面）不要开
+- ✅ 网页、HTTP API（国内节点）必须开
+
+官方文档：<https://doc.natfrp.com/frpc/auto-https.html>
+
+### 9.5 隧道 API 速查（v4，路径不是 RESTful）
+
+| 操作 | 请求 |
+|---|---|
+| 列表 | `GET /v4/tunnels` |
+| 创建 | `POST /v4/tunnels` body `{name,type,node,local_ip,local_port}` |
+| 修改 | `POST /v4/tunnel/edit` body `{id,extra?,note?,local_ip?,local_port?}` |
+| 删除 | `POST /v4/tunnel/delete` body `{id}` |
+| 节点 | `GET /v4/nodes`（**返回以 id 为键的对象，不是数组**） |
+| 账号 | `GET /v4/user/info` |
+| 子域名 | `POST /v4/domain/get`、`POST /v4/domain/bind` |
+
+`GET /v4/tunnels` 里每条含 `{id,name,node,type,online,extra,remote,local_port}`。
+免费号隧道数上限 2 条，满了建隧道返回
+`{"code":403,"msg":"您的隧道数量已到达上限 (当前 2 + 创建 1 > 2)"}`（HTTP 状态是 500，别看状态码）。
+
+---
+
+## 10. 隧道下的连接稳定性（真机踩出来的）
+
+SakuraFrp / cloudflared 反代下，`POST` 偶发 `net::ERR_CONNECTION_CLOSED`，
+前端表现为「点了提交没反应」。根因与修法：
+
+- **node 默认 `keepAliveTimeout = 5s`**，比反代的 60 秒空闲超时短。于是会出现
+  「node 刚准备关掉空闲连接、反代正好复用这条连接发请求」→ 连接被单方面关闭。
+  修法：`server.keepAliveTimeout = 72s`、`headersTimeout = 75s`、`requestTimeout = 120s`，
+  让关连接的决定总由反代先做出。
+- **前端 `api()` 加 20 秒超时 + 网络层重试一次**。`fetch` 自身抛错（连接被关/超时/断网）
+  标记 `network=true` 后重试；HTTP 4xx/5xx 不重试（那是业务结果）。超时还保证
+  `.then/.catch` 一定执行，调用方的锁不会悬空。
+
+---
+
+## 11. 排障速查
 
 | 现象 | 原因 | 修法 |
 |---|---|---|

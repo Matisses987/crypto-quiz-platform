@@ -39,16 +39,30 @@
   done
 
   # 顺手把公网隧道也拉起来（服务器起来了才有意义）
+  #
+  # 优先 SakuraFrp：域名与端口固定（school.u2095320.nyat.app:32614），重启、
+  # 换网络都不变，收藏夹/二维码可以长期用；cloudflared quick tunnel 每次启动
+  # 都是新域名，只适合临时演示。CQP_TUNNEL=sakura|cloudflare|none 可覆盖。
   if [ "$CODE" = "200" ]; then
-    if [ -x "$H/cqp-app/tunnel-cloudflared.sh" ]; then
-      echo "$(date '+%F %T') starting tunnel" >> "$LOG"
+    TUNNEL_KIND=${CQP_TUNNEL:-sakura}
+    if [ "$TUNNEL_KIND" = "sakura" ] && [ -x "$H/cqp-app/tunnel-sakura.sh" ]; then
+      echo "$(date '+%F %T') starting sakura tunnel" >> "$LOG"
+      ( cd "$H/cqp-app" && HOME=$H PREFIX=/data/data/com.termux/files/usr \
+          PATH=/data/data/com.termux/files/usr/bin:/system/bin \
+          LD_LIBRARY_PATH=/data/data/com.termux/files/usr/lib \
+          TMPDIR=/data/data/com.termux/files/usr/tmp \
+          ./tunnel-sakura.sh --bg >> "$LOG" 2>&1 )
+      URL=$(cat "$H/cqp-app/log/sakura.addr" 2>/dev/null)
+      echo "$(date '+%F %T') sakura url=${URL:-none}" >> "$LOG"
+    elif [ "$TUNNEL_KIND" = "cloudflare" ] && [ -x "$H/cqp-app/tunnel-cloudflared.sh" ]; then
+      echo "$(date '+%F %T') starting cloudflared tunnel" >> "$LOG"
       ( cd "$H/cqp-app" && HOME=$H PREFIX=/data/data/com.termux/files/usr \
           PATH=/data/data/com.termux/files/usr/bin:/system/bin \
           LD_LIBRARY_PATH=/data/data/com.termux/files/usr/lib \
           TMPDIR=/data/data/com.termux/files/usr/tmp \
           ./tunnel-cloudflared.sh --bg >> "$LOG" 2>&1 )
       URL=$(cat "$H/cqp-app/log/cloudflared.url" 2>/dev/null)
-      echo "$(date '+%F %T') tunnel url=${URL:-none}" >> "$LOG"
+      echo "$(date '+%F %T') cloudflared url=${URL:-none}" >> "$LOG"
     fi
   fi
 

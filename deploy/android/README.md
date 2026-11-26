@@ -105,7 +105,62 @@ ip -4 addr show wlan0 | sed -n 's/.*inet \([0-9.]*\)\/.*/\1/p'
 
 ## 6. 公网访问
 
-### 6.1 cloudflared（推荐，免费、带 https）
+### 6.1 SakuraFrp（推荐，域名和端口固定）
+
+```bash
+./tunnel-sakura.sh --bg      # 约 10~30 秒后打印地址
+./tunnel-sakura.sh --stop
+cat log/sakura.addr          # school.u2095320.nyat.app:32614
+```
+
+固定地址 `https://school.u2095320.nyat.app:32614`，重启、换 WiFi、换 4G 都不变，
+可以存书签、发二维码。这是它相对 cloudflared 的唯一但决定性的优势。
+
+前提：账号里要有空闲的隧道名额（免费号上限 2 条）。`deploy/android/tunnel-sakura.sh`
+默认用隧道 `29975109`（`cqp_web`，node 34 浙江三线PLUS7 → 本地 `127.0.0.1:3010`），
+换账号/换隧道时用环境变量覆盖：
+
+```bash
+FRP_TOKEN=<token> FRP_TUNNEL=<隧道id> ./tunnel-sakura.sh --bg
+```
+
+**建隧道的正确姿势（API 是 v4，但路径不是 RESTful，试错过的都记在这里）**
+
+```bash
+# 建 TCP 隧道（不要建 http/https 类型，NYAT APP 域名不能直接用于 HTTP 隧道）
+curl -s -X POST https://api.natfrp.com/v4/tunnels \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"name":"cqp_web","type":"tcp","node":34,"local_ip":"127.0.0.1","local_port":3010}'
+# → 201 {"id":29975109,"remote":"32614",...}
+
+# 改隧道（PATCH/PUT /v4/tunnels/{id} 全是 404，只有这个 POST 有效）
+curl -s -X POST https://api.natfrp.com/v4/tunnel/edit \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"id":29975109,"extra":"auto_https = school.u2095320.nyat.app"}'
+
+# 绑子域名（rr 必须在白名单词里，cqp 不在，用 school）
+curl -s -X POST https://api.natfrp.com/v4/domain/bind \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"rr":"school","tunnel":29975109,"domain":"u2095320.nyat.app","type":"CNAME"}'
+# → 204，白名单词用 GET /v4/domain/get 拿
+```
+
+**三个必踩的坑**
+
+1. **纯 TCP 隧道用 `http://` 访问会被网关拦成 501**。正文写「您正试图使用 HTTP 协议
+   访问此隧道 … 执行机房的内容合规要求和有关部门的管控规定」，解决办法就是开自动 HTTPS。
+2. **`auto_https` 必须写具体域名，不能只写 `auto`**。写 `auto` 时 frpc 自签一张证书，
+   浏览器报警告、curl 要 `-k`；写 `school.u2095320.nyat.app` 才会从服务端下发
+   `*.u2095320.nyat.app` 的受信证书（日志里能看到 `autohttps certs loaded from server`）。
+   改完 `extra` 必须**重启 frpc** 才生效。
+3. **TCP 隧道不带 `X-Forwarded-For`**，所以 `CQP_TRUST_PROXY` 必须留 `0`，
+   否则限流会按伪造头算。`CQP_COOKIE_SECURE` 用 https 访问时可以改 `1`。
+
+`auto_https` 的原理：frpc 用 TLS 对外收连接，脱壳后用**明文 HTTP** 连本地服务，
+所以本地服务不需要自己配证书。反过来说，本地已经开了 HTTPS 就不要再开自动 HTTPS
+（会 TLS 套 TLS）。参见 <https://doc.natfrp.com/frpc/auto-https.html>。
+
+### 6.2 cloudflared（临时演示用，域名每次都变）
 
 ```bash
 ./tunnel-cloudflared.sh --bg      # 约 10~20 秒后打印 https://xxx.trycloudflare.com
@@ -123,21 +178,26 @@ Termux 上有两个必踩的坑，脚本已处理：
    要 `export SSL_CERT_FILE=$PREFIX/etc/tls/cert.pem`（`$PREFIX/etc/ssl/certs/ca-certificates.crt` 不存在）。
 
 另外 quick tunnel 偶发 `429 [10000] Tunnelstore request failed`，重试即可（脚本自带 4 次重试）。
-域名每次重启都会换。
+域名每次重启都会换 —— 这也是它只能当临时演示的原因。
 
-### 6.2 其它方式（实测对比）
+### 6.3 其它方式（实测对比）
 
 | 方式 | 结论 |
 |---|---|
 | **localhost.run** `ssh -R 80:127.0.0.1:3010 nokey@localhost.run` | 能用，但免费版限速（日志 `slowed by 25 seconds`），502 频发，域名每次换 → 不推荐 |
 | **serveo.net** | 连接成功，但浏览器先撞 `Serveo Browser Warning` 拦截页，无头浏览器过不去 → 不可用 |
-| **SakuraFrp** | 手机上有 `frpc 0.51.0-sakura-15.1`，API 也通；但免费账号隧道数上限 2 条已占满，新建 3010 被拒（`403 隧道数量已到达上限`）→ 需删旧隧道或升级。TCP 隧道**不带 XFF**，`CQP_TRUST_PROXY` 必须留 0 |
 
-SakuraFrp 若要用（先腾出隧道名额）：
+### 6.4 开机自启默认走哪条隧道
+
+`/data/adb/service.d/cqp-autostart.sh` 里服务起来（`code=200`）之后会顺手拉起隧道，
+默认 **SakuraFrp**（域名固定）。要换：
 
 ```bash
-$HOME/mcserver/frpc/frpc -f <token>:<tunnel_id> --watch    # 前台
+# 在 cqp-autostart.sh 顶部或 su 环境里
+export CQP_TUNNEL=cloudflare   # 或 none，只起服务不起隧道
 ```
+
+日志里能看到 `starting sakura tunnel` 与 `sakura url=...`。
 
 ## 7. 验收
 
@@ -145,7 +205,7 @@ $HOME/mcserver/frpc/frpc -f <token>:<tunnel_id> --watch    # 前台
 
 ```bash
 node tools/e2e/phone-verify.mjs http://192.168.137.246:3010 <用户名> <密码>
-node tools/e2e/phone-verify.mjs https://xxx.trycloudflare.com <用户名> <密码>
+node tools/e2e/phone-verify.mjs https://school.u2095320.nyat.app:32614 <用户名> <密码>
 ```
 
 15 项：健康 / 首页 / 产物不内联题库 / 登录 / 前端启动 / 已登录 / 导航 9 项 / 三库齐全 /
@@ -159,6 +219,15 @@ node tools/e2e/phone-verify.mjs https://xxx.trycloudflare.com <用户名> <密�
 - 别用 `readyState === "complete"` 当就绪判据。隧道下 readyState 早就 complete，
   而 `/api/banks`、`/api/store` 还没回来（`banks=0`），此时 `renderBankSwitcher()`
   认为只有 0 个题库、直接把宿主清空，题库下拉根本不存在。要等到 `state.bank && state.store`。
+  但登录前 `/api/banks` 是 401，这两个字段永远不就位 → 首次进页面时不能要求它们
+  （`waitForPage(0, 90000, { needLoaded: !(USER && PASS) })`）。
+
+**隧道下偶发 `net::ERR_CONNECTION_CLOSED`**（真机踩出来的，已修）：
+症状是练习提交点了没反应、`item.submitting` 永久为 true。根因是 node 默认
+`keepAliveTimeout = 5s`，比反代的 60 秒空闲超时短，于是「node 刚准备关掉空闲连接、
+反代正好复用这条连接发请求」→ 浏览器侧连接被关。两头都做了加固：
+服务端把 `keepAliveTimeout` 拉到 72s，前端 `api()` 加 20 秒超时 + 网络层重试一次
+（HTTP 4xx/5xx 不重试）。
 
 ## 8. 备份与排障
 

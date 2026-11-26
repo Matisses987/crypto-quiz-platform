@@ -207,9 +207,12 @@ Termux 是 **bionic**，会直接 `CANNOT LINK EXECUTABLE ... library "libc.so.6
 手机不联网也能验收：`adb forward tcp:13310 tcp:3010` 后开 <http://127.0.0.1:13310>。
 
 **完整真机部署（含开机自启、公网隧道、验收脚本）见 [`deploy/android/README.md`](deploy/android/README.md)**：
-`cqp_restart.sh`（root 一键重启 + 健康自检 + 权限还原）、`cqp-autostart.sh`（开机自启）、
-`start.sh` / `stop.sh`（Termux 用户侧）、`tunnel-cloudflared.sh`（免费 https 隧道，含
-Go 解析器与根证书两个坑的处理）、`dnsfwd.mjs`。
+`cqp_restart.sh`（root 一键重启 + 健康自检 + 权限还原）、`cqp-autostart.sh`（开机自启，默认拉起 SakuraFrp）、
+`start.sh` / `stop.sh`（Termux 用户侧）、`tunnel-sakura.sh`（固定域名 https）、
+`tunnel-cloudflared.sh`（临时演示用，含 Go 解析器与根证书两个坑的处理）、`dnsfwd.mjs`。
+
+真机实测地址：`https://school.u2095320.nyat.app:32614`（SakuraFrp，域名端口固定），
+局域网 `http://192.168.137.246:3010`。
 
 ---
 
@@ -221,6 +224,9 @@ Go 解析器与根证书两个坑的处理）、`dnsfwd.mjs`。
 - **HTTP/HTTPS 隧道 + 自己的域名**：URL 干净、有真 IP；内地节点要求域名已备案
 - frpc 版本要求 **≥ `0.51.0-sakura-14`**（版本号必须含 `sakura`）
 - `CQP_COOKIE_SECURE` 与 `CQP_TRUST_PROXY` 必须和隧道类型匹配（见手册 §6）
+- **国内节点 + TCP 隧道跑 Web 应用必须开自动 HTTPS**，否则 `http://` 访问会被网关拦成 501；
+  `auto_https` 要写具体子域名（写 `auto` 只会自签证书），改完必须重启 frpc（见手册 §9）
+- 子域名前缀要在白名单里（`school`/`lab`/`git`/`mc`… 约 90 个），`cqp` 不在，会报「不在白名单内」
 
 ---
 
