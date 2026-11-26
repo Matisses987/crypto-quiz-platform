@@ -43,7 +43,8 @@ function rec(qid, overrides) {
 
 test("exportFileName follows the frozen pattern", () => {
   const nowISO = "2026-10-06T22:30:15+08:00";
-  const expectedStamp = CQP.localStamp(new Date(Date.parse(nowISO)));
+  // 时间戳按串自身偏移取值，所以这里可以直接写死，不再依赖跑测试的机器时区
+  const expectedStamp = "20261006-223015";
   assert.equal(
     CQP.exportFileName({ nickname: "小明", scope: "day", from: "2026-10-06", to: null, nowISO }),
     "密码赛学习记录_小明_单日2026-10-06_" + expectedStamp + ".json"

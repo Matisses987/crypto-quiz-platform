@@ -64,6 +64,16 @@ export function tm_localStamp(date) {
   );
 }
 
+// CQP.stampOf(tsISO) -> "YYYYMMDD-HHmmss"
+// 与 localStamp 的区别：这里按**串自身携带的偏移**取值，不看运行机器的时区。
+// 模拟赛 id、导出文件名要跟 startedAt / ts 对齐，服务器换成 UTC 也不能漂。
+export function tm_stampOf(tsISO) {
+  if (typeof tsISO !== "string") throw new TypeError("stampOf(tsISO): tsISO must be a string");
+  if (!tm_ISO_RE.test(tsISO)) throw new TypeError("stampOf(tsISO): tsISO is not ISO-8601 with offset");
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(tsISO);
+  return m[1] + m[2] + m[3] + "-" + m[4] + m[5] + m[6];
+}
+
 export function tm_isIsoTs(value) {
   return typeof value === "string" && tm_ISO_RE.test(value);
 }

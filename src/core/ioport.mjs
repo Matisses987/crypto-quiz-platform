@@ -9,7 +9,7 @@ import {
   cn_TYPES,
   cn_VERSION,
 } from "./constants.mjs";
-import { tm_isoNow, tm_isIsoTs, tm_localDateOf, tm_localStamp, tm_filterByDate, tm_dateInScope } from "./time.mjs";
+import { tm_isoNow, tm_isIsoTs, tm_localDateOf, tm_localStamp, tm_stampOf, tm_filterByDate, tm_dateInScope } from "./time.mjs";
 import { rc_recordKey } from "./records.mjs";
 
 const io_QID_RE = new RegExp(cn_QID_RE_SRC);
@@ -57,9 +57,16 @@ export function io_exportFileName(input) {
   }
   const nick = io_sanitizeNickname(input.nickname);
   const label = io_rangeLabel(scope, input.from, input.to);
-  const now = input.nowISO ? new Date(Date.parse(input.nowISO)) : new Date();
-  if (!Number.isFinite(now.getTime())) throw new TypeError("exportFileName(input): input.nowISO is not parseable");
-  return "密码赛学习记录_" + nick + "_" + label + "_" + tm_localStamp(now) + ".json";
+  // 给了 nowISO 就按串自身偏移取时间戳（服务器跑在 UTC 也不会跟记录时间漂），
+  // 没给则取当下时刻、用运行机器时区。
+  let stamp;
+  if (input.nowISO) {
+    if (!tm_isIsoTs(input.nowISO)) throw new TypeError("exportFileName(input): input.nowISO is not ISO-8601 with offset");
+    stamp = tm_stampOf(input.nowISO);
+  } else {
+    stamp = tm_localStamp(new Date());
+  }
+  return "密码赛学习记录_" + nick + "_" + label + "_" + stamp + ".json";
 }
 
 function io_validateScope(scope, from, to) {

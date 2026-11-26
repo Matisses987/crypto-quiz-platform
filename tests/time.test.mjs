@@ -81,6 +81,15 @@ test("localStamp renders YYYYMMDD-HHmmss", () => {
   assert.equal(stamp, "20261006-223015");
 });
 
+test("stampOf follows the offset inside the timestamp, not the machine timezone", () => {
+  // 同一时刻的三种写法必须给出同一个时间戳，且与 UTC 机器无关
+  assert.equal(CQP.stampOf("2026-10-10T19:30:00+08:00"), "20261010-193000");
+  assert.equal(CQP.stampOf("2026-10-10T11:30:00+00:00"), "20261010-113000");
+  assert.equal(CQP.stampOf("2026-10-10T20:30:00+09:00"), "20261010-203000");
+  assert.throws(() => CQP.stampOf("2026-10-10 19:30:00"), TypeError);
+  assert.throws(() => CQP.stampOf(null), TypeError);
+});
+
 test("diffMs computes milliseconds between ISO strings", () => {
   assert.equal(CQP.diffMs("2026-10-05T21:00:00+08:00", "2026-10-05T21:00:10+08:00"), 10000);
   assert.equal(CQP.diffMs("2026-10-05T21:00:00+08:00", "2026-10-05T21:00:00+09:00"), -3600000);

@@ -9,7 +9,7 @@ import {
 } from "./constants.mjs";
 import { dr_makeRng, dr_shuffle, dr_chapterOrderIndex, dr_typeOrderIndex } from "./draw.mjs";
 import { jd_judge } from "./judge.mjs";
-import { tm_isoNow, tm_localStamp, tm_diffMs } from "./time.mjs";
+import { tm_isoNow, tm_stampOf, tm_diffMs } from "./time.mjs";
 import { ov_clampElapsed } from "./overrides.mjs";
 
 // 最大余数法配额分配：total 席位、poolMap 各键池大小、order 决定并列时的优先顺序
@@ -116,7 +116,7 @@ function mk_randomHex6() {
 }
 
 export function mk_sessionId(nowISO) {
-  return "mock-" + tm_localStamp(new Date(Date.parse(nowISO))) + "-" + mk_randomHex6();
+  return "mock-" + tm_stampOf(nowISO) + "-" + mk_randomHex6();
 }
 
 // CQP.buildMockPaper({bank, rng, nowISO})

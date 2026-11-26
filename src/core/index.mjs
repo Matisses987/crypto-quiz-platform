@@ -32,7 +32,7 @@ import {
   cn_VERSION,
   cn_WRONG_THRESHOLD_USERS,
 } from "./constants.mjs";
-import { tm_dateInScope, tm_diffMs, tm_filterByDate, tm_isDateString, tm_isIsoTs, tm_isoNow, tm_localDateOf, tm_localStamp } from "./time.mjs";
+import { tm_dateInScope, tm_diffMs, tm_filterByDate, tm_isDateString, tm_isIsoTs, tm_isoNow, tm_localDateOf, tm_localStamp, tm_stampOf } from "./time.mjs";
 import { jd_answerText, jd_color, jd_foldWidth, jd_isWrongEntry, jd_judge, jd_norm, jd_responseModeOf } from "./judge.mjs";
 import { rc_makeRecord, rc_recordKey, rc_statsOfRecords } from "./records.mjs";
 import { ms_groupSummary, ms_masteryBy, ms_masteryOfAttempts, ms_masteryOfQuestion, ms_masteryOverall } from "./mastery.mjs";
@@ -123,6 +123,8 @@ export function cq_createCQP(bank) {
   CQP.filterByDate = tm_filterByDate;
   CQP.dateInScope = tm_dateInScope;
   CQP.localStamp = tm_localStamp;
+// 按时间串自身偏移取时间戳（不依赖运行机器时区），供模拟赛 id 与导出文件名使用
+CQP.stampOf = tm_stampOf;
   CQP.diffMs = tm_diffMs;
   CQP.isIsoTs = tm_isIsoTs;
   CQP.isDateString = tm_isDateString;
