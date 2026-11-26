@@ -108,6 +108,7 @@ deploy/
   start.ps1             Windows 启动/停止/状态脚本
   termux-setup.sh       Termux 一键环境准备（手机上跑）
   frp-tunnel.md         SakuraFrp 隧道配置手册
+  android/              真机部署（Redmi K50 实测）：重启/自启/隧道脚本 + 完整说明
 
 tools/
   build.mjs             构建（--target server 产 public/index.html；默认离线单文件）
@@ -204,6 +205,11 @@ Termux 是 **bionic**，会直接 `CANNOT LINK EXECUTABLE ... library "libc.so.6
 必须用 `pkg install nodejs-lts`（Termux 仓库版，编译时带 `--dest-os=android --shared-sqlite`）。
 
 手机不联网也能验收：`adb forward tcp:13310 tcp:3010` 后开 <http://127.0.0.1:13310>。
+
+**完整真机部署（含开机自启、公网隧道、验收脚本）见 [`deploy/android/README.md`](deploy/android/README.md)**：
+`cqp_restart.sh`（root 一键重启 + 健康自检 + 权限还原）、`cqp-autostart.sh`（开机自启）、
+`start.sh` / `stop.sh`（Termux 用户侧）、`tunnel-cloudflared.sh`（免费 https 隧道，含
+Go 解析器与根证书两个坑的处理）、`dnsfwd.mjs`。
 
 ---
 

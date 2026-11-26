@@ -131,20 +131,47 @@ async function main() {
 
   // 等页面真正落地：新标签页刚建好时 document 还是 about:blank，
   // 这时候 fetch("/api/...") 会报 "Failed to parse URL from /api/auth/login"。
-  // 注意别等 readyState === "complete"：走公网隧道时 313KB 单文件解析很慢，
+  // 注意别等 readyState === "complete"：走公网隧道时单文件解析很慢，
   // readyState 会长时间停在 "loading"，但 #main 已经在了、应用也已经启动。
-  async function waitForPage(timeoutMs = 60000) {
+  //
+  // 关键：脚本启动之后还要再拉 /api/banks 与 /api/store，走隧道时这两步
+  // 可能各要几百毫秒到几秒。只等 "CQPUI 存在" 就往下跑，会撞上
+  // state.bankSlug === "" / banks 还是 0 的中间态 —— 那时 renderBankSwitcher()
+  // 认为只有 0 个题库，直接把宿主清空，题库下拉根本不存在。
+  //
+  // 再一个坑：Page.reload 之后，第一次 evaluate 往往还打在**旧文档**上，
+  // 旧文档当然是 loaded:true，于是立刻就返回了，接着读到的全是被清空的状态。
+  // 所以记下旧文档的 performance.timeOrigin，等它变成另一个值（= 换了新文档）
+  // 并且新文档自己也 loaded 了，才算数。
+  //
+  // 第三个坑：**登录前不能要求 loaded**。未登录时 /api/banks 返回 401，
+  // state.bank / state.store 永远不会就位，等它必然超时。
+  async function waitForPage(minTimeOrigin, timeoutMs = 90000, opts = {}) {
+    const needLoaded = opts.needLoaded !== false;
     const deadline = Date.now() + timeoutMs;
     let last = null;
     while (Date.now() < deadline) {
       try {
         const st = await evalJs(
           conn,
-          `({href: location.href, ready: document.readyState, hasApp: !!document.getElementById("main"),
-            booted: typeof window.CQPUI !== "undefined"})`
+          `(() => {
+             const ui = window.CQPUI;
+             const s = ui && ui.state;
+             return { href: location.href, ready: document.readyState,
+               hasApp: !!document.getElementById("main"), booted: !!ui,
+               origin: Math.round(performance.timeOrigin || 0),
+               page: s ? s.page : null, bankSlug: s ? s.bankSlug : null,
+               banks: s && s.banks ? s.banks.length : 0,
+               loaded: !!(s && s.bank && s.store) };
+           })()`
         );
         last = st;
-        if (st.href.startsWith(BASE) && st.hasApp && (st.booted || st.ready === "complete")) return st;
+        const landed = st.href.startsWith(BASE) && st.hasApp && st.booted;
+        const fresh = !minTimeOrigin || st.origin !== minTimeOrigin;
+        // 不能用 readyState === "complete" 当兜底：隧道下 readyState 早就 complete，
+        // 而 /api/banks 与 /api/store 还没回来（banks=0、bank/store 都 false），
+        // 那时候往下跑，题库下拉是空的。必须等到 bank 与 store 都就位。
+        if (landed && fresh && (!needLoaded || st.loaded)) return st;
       } catch (err) {
         /* 页面切换中，evaluate 可能失败，继续等 */
       }
@@ -152,8 +179,8 @@ async function main() {
     }
     throw new Error("page did not load: " + BASE + " last=" + JSON.stringify(last));
   }
-  await waitForPage();
-  await sleep(600);
+  await waitForPage(0, 90000, { needLoaded: !(USER && PASS) });
+  await sleep(300);
 
   try {
     // 登录
@@ -167,8 +194,13 @@ async function main() {
         })()`
       );
       check(login.startsWith("200"), "登录成功", login.slice(0, 80));
+      // 登录后必须重新载入页面（前端要在 boot 时读 /api/me），
+      // 但隧道下这次载入要好几秒，不能只 sleep 一个定值就往下走。
+      // 先记下旧文档的 timeOrigin，等新文档（另一个 timeOrigin）启动完成。
+      const oldOrigin = await evalJs(conn, `Math.round(performance.timeOrigin || 0)`);
       await conn.send("Page.reload");
-      await sleep(1800);
+      await waitForPage(oldOrigin);
+      await sleep(300);
     }
 
     const state = await evalJs(
